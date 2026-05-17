@@ -2,9 +2,16 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
+import {
+  getProductImageUrl,
+  getProductImageUrls,
+  type Product,
+} from "@/lib/productImages";
+import PayButton from "@/app/components/PayButton";
+import Product360Viewer from "@/app/components/Product360Viewer";
 
 export default function Home() {
-  const [products, setProducts] = useState<any[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -38,41 +45,59 @@ export default function Home() {
         </button>
       </section>
 
-      {/* PRODUCTS (DYNAMIC) */}
+      {/* PRODUCTS */}
       <section className="px-6 py-16">
         <h2 className="text-3xl font-bold text-pink-500 mb-6">
           Featured Products
         </h2>
 
         <div className="grid md:grid-cols-3 gap-6">
+
           {products.map((p) => {
-    const imageUrl = p.image_url
-      ? supabase.storage
-          .from("product-images")
-          .getPublicUrl(p.image_url).data.publicUrl
-      : null;
+            const imageUrl = getProductImageUrl(p.image_url);
+            const rotationImageUrls = getProductImageUrls(
+              p.rotation_image_urls
+            );
 
-    return (
-      <div key={p.id} className="bg-zinc-900 p-4 rounded-xl">
+            return (
+              <div
+                key={p.id}
+                className="bg-zinc-900 p-4 rounded-xl"
+              >
 
-        {imageUrl && (
-          <img
-            src={imageUrl}
-            className="h-40 w-full object-cover rounded"
-          />
-        )}
+                {/* PRODUCT IMAGE */}
+                <Product360Viewer
+                  alt={p.name}
+                  imageUrl={imageUrl}
+                  frameUrls={rotationImageUrls}
+                  className="rounded"
+                />
 
-        <h3 className="mt-4 font-semibold">
-          {p.name}
-        </h3>
+                {/* PRODUCT NAME */}
+                <h3 className="mt-4 font-semibold text-lg">
+                  {p.name}
+                </h3>
 
-        <p className="text-pink-400">
-          ₦{p.price}
-        </p>
+                {/* PRODUCT DESCRIPTION */}
+                <p className="text-gray-400 mt-2">
+                  {p.description}
+                </p>
 
-      </div>
-    );
-  })}
+                {/* PRODUCT PRICE */}
+                <p className="text-pink-400 mt-3 mb-4 text-xl font-bold">
+                  ₦{p.price}
+                </p>
+
+                {/* PAYMENT BUTTON */}
+                <PayButton
+                  amount={Number(p.price)}
+                  productName={p.name}
+                />
+
+              </div>
+            );
+          })}
+
         </div>
       </section>
 
