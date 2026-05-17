@@ -99,7 +99,7 @@ export default function Product360Viewer({
       onPointerUp={clearDragState}
       onPointerCancel={clearDragState}
       className={[
-        "h-40 w-full select-none rounded bg-zinc-950 bg-cover bg-center outline-none ring-pink-400 transition-shadow focus-visible:ring-2",
+        "h-40 w-full select-none rounded-md border border-white/10 bg-zinc-950 bg-cover bg-center outline-none ring-amber-200 transition-shadow focus-visible:ring-2",
         isInteractive ? "cursor-grab active:cursor-grabbing" : "",
         className,
       ].join(" ")}

@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1200" viewBox="0 0 1200 1200" role="img" aria-labelledby="title desc">
+  <title id="title">Dolapo logo</title>
+  <desc id="desc">A black and gold creator tools badge with camera, phone, ring light, tripod, microphone, and the Dolapo name.</desc>
+  <defs>
+    <radialGradient id="badge-bg" cx="48%" cy="32%" r="72%">
+      <stop offset="0%" stop-color="#2a2823"/>
+      <stop offset="55%" stop-color="#11100e"/>
+      <stop offset="100%" stop-color="#050504"/>
+    </radialGradient>
+    <linearGradient id="gold" x1="12%" x2="88%" y1="0%" y2="100%">
+      <stop offset="0%" stop-color="#fff2b7"/>
+      <stop offset="35%" stop-color="#d7a73e"/>
+      <stop offset="68%" stop-color="#8a5a12"/>
+      <stop offset="100%" stop-color="#f7d879"/>
+    </linearGradient>
+    <linearGradient id="ivory" x1="0%" x2="100%" y1="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#efe4ce"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="18" stdDeviation="18" flood-color="#000000" flood-opacity=".55"/>
+    </filter>
+  </defs>
+  <rect width="1200" height="1200" fill="#0b0a08"/>
+  <circle cx="600" cy="560" r="426" fill="url(#badge-bg)" stroke="url(#gold)" stroke-width="34" filter="url(#shadow)"/>
+  <circle cx="600" cy="560" r="372" fill="none" stroke="#f9df8a" stroke-width="6" opacity=".78"/>
+  <path d="M214 634 C326 588 416 588 514 630 C616 674 722 672 986 624 L986 736 C742 792 584 790 464 740 C370 702 292 704 214 744 Z" fill="#11100e" stroke="url(#gold)" stroke-width="16"/>
+  <g fill="none" stroke="url(#gold)" stroke-linecap="round" stroke-linejoin="round" stroke-width="18">
+    <rect x="308" y="386" width="98" height="166" rx="22"/>
+    <path d="M357 552 L357 640"/>
+    <path d="M312 424 L296 424 M410 424 L426 424 M340 552 L374 552"/>
+    <circle cx="592" cy="354" r="54"/>
+    <circle cx="592" cy="354" r="24"/>
+    <path d="M514 320 L538 286 L646 286 L672 320 Z"/>
+    <path d="M514 408 L670 408 L656 464 L528 464 Z"/>
+    <path d="M592 464 L592 632 M542 632 L592 464 L642 632"/>
+    <path d="M524 520 L470 646 M660 520 L716 646"/>
+    <circle cx="798" cy="380" r="92"/>
+    <circle cx="798" cy="380" r="60"/>
+    <path d="M798 472 L798 646 M760 646 L836 646"/>
+  </g>
+  <g fill="url(#gold)">
+    <path d="M444 872 L470 812 L496 872 Z"/>
+    <rect x="510" y="812" width="12" height="64" rx="6"/>
+    <rect x="674" y="812" width="12" height="64" rx="6"/>
+    <path d="M584 808 C562 808 546 824 546 848 L546 866 C546 890 562 906 584 906 C606 906 622 890 622 866 L622 848 C622 824 606 808 584 808 Z M584 822 C596 822 606 832 606 848 L606 866 C606 882 596 892 584 892 C572 892 562 882 562 866 L562 848 C562 832 572 822 584 822 Z"/>
+    <path d="M712 834 L738 834 L748 816 L814 816 L824 834 L850 834 L850 898 L712 898 Z M782 848 C764 848 750 862 750 879 C750 896 764 910 782 910 C800 910 814 896 814 879 C814 862 800 848 782 848 Z"/>
+  </g>
+  <text x="600" y="750" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="148" font-weight="700" letter-spacing="4" fill="url(#ivory)" stroke="#946515" stroke-width="8">DOLAPO</text>
+  <path id="tagline" d="M318 915 A330 330 0 0 0 882 915" fill="none"/>
+  <text font-family="Arial, Helvetica, sans-serif" font-size="27" font-weight="700" letter-spacing="5" fill="#d7a73e">
+    <textPath href="#tagline" startOffset="50%" text-anchor="middle">TOOLS TO CREATE. CONTENT THAT CONNECTS.</textPath>
+  </text>
+</svg>

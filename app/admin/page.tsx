@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState, type ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
+import { FiLogOut, FiPackage, FiShoppingBag, FiTruck } from "react-icons/fi";
 import { supabase } from "@/lib/supabaseClient";
 import {
   getProductImageUrl,
@@ -9,11 +10,12 @@ import {
   PRODUCT_IMAGE_BUCKET,
   type Product,
 } from "@/lib/productImages";
+import BrandLogo from "@/app/components/BrandLogo";
 import Product360Viewer from "@/app/components/Product360Viewer";
 
 const ADMIN_IDLE_TIMEOUT_MS = 15 * 60 * 1000;
 const ADMIN_IDLE_CHECK_MS = 60 * 1000;
-const ADMIN_LAST_ACTIVITY_KEY = "lacky-hair-admin-last-activity";
+const ADMIN_LAST_ACTIVITY_KEY = "dolapo-admin-last-activity";
 
 const ADMIN_ACTIVITY_EVENTS = [
   "click",
@@ -507,7 +509,7 @@ export default function AdminPage() {
   // -----------------------------------
   if (loading) {
     return (
-      <div className="text-white bg-black min-h-screen flex items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center bg-studio text-champagne">
         Loading...
       </div>
     );
@@ -517,40 +519,44 @@ export default function AdminPage() {
   // UI
   // -----------------------------------
   return (
-    <main className="min-h-screen bg-black text-white p-6">
+    <main className="min-h-screen bg-studio p-5 text-champagne sm:p-8">
 
-      <div className="max-w-6xl mx-auto">
+      <div className="mx-auto max-w-7xl">
 
         {/* HEADER */}
-        <div className="mb-6 flex items-center justify-between gap-4">
+        <div className="mb-8 flex flex-col justify-between gap-5 border-b border-white/10 pb-6 md:flex-row md:items-center">
 
-          <h1 className="text-3xl font-bold text-pink-500">
-            Admin Dashboard
-          </h1>
+          <BrandLogo compact />
 
           <button
             type="button"
             onClick={handleLogout}
-            className="rounded bg-zinc-800 px-4 py-2 font-semibold text-pink-300 hover:bg-zinc-700"
+            className="inline-flex w-fit items-center gap-2 rounded-md border border-amber-200/35 px-4 py-2 text-sm font-bold uppercase tracking-[0.14em] text-amber-100 transition hover:border-amber-100 hover:text-white"
           >
+            <FiLogOut aria-hidden="true" />
             Logout
           </button>
 
         </div>
 
         {/* ADD PRODUCT */}
-        <div className="bg-zinc-900 p-6 rounded-xl">
+        <div className="rounded-lg border border-amber-200/20 bg-white/[0.045] p-6 shadow-[0_30px_80px_rgba(0,0,0,0.32)]">
 
-          <h2 className="text-2xl font-bold text-pink-400 mb-6">
-            Add Product
+          <p className="flex items-center gap-2 text-sm font-black uppercase tracking-[0.22em] text-amber-200">
+            <FiPackage aria-hidden="true" />
+            Inventory
+          </p>
+
+          <h2 className="mt-2 text-3xl font-bold text-white">
+            Add creator tool
           </h2>
 
           <input
             name="name"
-            placeholder="Product Name"
+            placeholder="Tool name"
             value={form.name}
             onChange={handleChange}
-            className="w-full mb-4 p-3 rounded bg-black border border-pink-500"
+            className="mb-4 w-full rounded-md border border-amber-200/30 bg-black/45 p-3 text-white outline-none transition placeholder:text-champagne/35 focus:border-amber-200"
           />
 
           <input
@@ -558,15 +564,15 @@ export default function AdminPage() {
             placeholder="Price"
             value={form.price}
             onChange={handleChange}
-            className="w-full mb-4 p-3 rounded bg-black border border-pink-500"
+            className="mb-4 w-full rounded-md border border-amber-200/30 bg-black/45 p-3 text-white outline-none transition placeholder:text-champagne/35 focus:border-amber-200"
           />
 
           <input
             name="description"
-            placeholder="Description"
+            placeholder="Short product description"
             value={form.description}
             onChange={handleChange}
-            className="w-full mb-4 p-3 rounded bg-black border border-pink-500"
+            className="mb-4 w-full rounded-md border border-amber-200/30 bg-black/45 p-3 text-white outline-none transition placeholder:text-champagne/35 focus:border-amber-200"
           />
 
           <input
@@ -575,11 +581,11 @@ export default function AdminPage() {
             onChange={(e) =>
               setImage(e.target.files?.[0] || null)
             }
-            className="w-full mb-4"
+            className="mb-4 w-full text-sm file:mr-4 file:rounded-md file:border-0 file:bg-amber-200 file:px-4 file:py-2 file:font-bold file:text-black"
           />
 
-          <p className="mb-2 text-sm font-semibold text-pink-200">
-            360 Photos (optional)
+          <p className="mb-2 text-sm font-semibold text-amber-100">
+            360 photos
           </p>
 
           <input
@@ -589,11 +595,11 @@ export default function AdminPage() {
             onChange={(e) =>
               setRotationImages(Array.from(e.target.files || []))
             }
-            className="w-full mb-2"
+            className="mb-2 w-full text-sm file:mr-4 file:rounded-md file:border-0 file:bg-amber-200 file:px-4 file:py-2 file:font-bold file:text-black"
           />
 
           {rotationImages.length > 0 && (
-            <p className="mb-6 text-sm text-zinc-300">
+            <p className="mb-6 text-sm text-champagne/70">
               {rotationImages.length} photos selected
             </p>
           )}
@@ -601,9 +607,9 @@ export default function AdminPage() {
           <button
             onClick={handleSubmit}
             disabled={saving}
-            className="w-full bg-pink-500 text-black py-3 rounded font-bold"
+            className="w-full rounded-md bg-amber-200 py-3 font-black uppercase tracking-[0.14em] text-black transition hover:bg-white disabled:opacity-60"
           >
-            {saving ? "Adding..." : "Add Product"}
+            {saving ? "Adding..." : "Add Tool"}
           </button>
 
         </div>
@@ -611,11 +617,12 @@ export default function AdminPage() {
         {/* PRODUCTS */}
         <div className="mt-12">
 
-          <h2 className="text-2xl font-bold mb-6 text-pink-400">
+          <h2 className="mb-6 flex items-center gap-3 text-2xl font-bold text-white">
+            <FiShoppingBag className="text-amber-200" aria-hidden="true" />
             Products
           </h2>
 
-          <div className="grid md:grid-cols-2 gap-6">
+          <div className="grid gap-5 md:grid-cols-2">
 
             {products.map((p) => {
               const imageUrl = getProductImageUrl(
@@ -628,35 +635,37 @@ export default function AdminPage() {
               return (
                 <div
                   key={p.id}
-                  className="border border-pink-500 p-4 rounded"
+                  className="rounded-lg border border-white/10 bg-white/[0.045] p-4 shadow-[0_20px_50px_rgba(0,0,0,0.24)]"
                 >
 
                   <Product360Viewer
                     alt={p.name}
                     imageUrl={imageUrl}
                     frameUrls={rotationImageUrls}
-                    className="mb-3"
+                    className="mb-4 h-56"
                   />
 
-                  <h3 className="font-bold text-lg">
+                  <h3 className="text-lg font-bold text-white">
                     {p.name}
                   </h3>
 
-                  <p>{p.description}</p>
+                  <p className="mt-2 text-sm leading-6 text-champagne/68">
+                    {p.description || "Premium creator tool for studio work."}
+                  </p>
 
-                  <p className="text-pink-400 mt-2">
+                  <p className="mt-3 text-2xl font-black text-amber-200">
                     ₦{p.price}
                   </p>
 
                   <button
                     onClick={() => deleteProduct(p)}
-                    className="mt-4 bg-red-600 px-4 py-2 rounded"
+                    className="mt-4 rounded-md bg-red-500 px-4 py-2 font-bold text-white transition hover:bg-red-400"
                   >
                     Delete
                   </button>
 
-                  <div className="mt-4 border-t border-zinc-700 pt-4">
-                    <p className="mb-2 text-sm text-pink-200">
+                  <div className="mt-4 border-t border-white/10 pt-4">
+                    <p className="mb-2 text-sm font-semibold text-amber-100">
                       {updatingProductId === p.id
                         ? "Updating 360 photos..."
                         : `${rotationImageUrls.length} 360 photos`}
@@ -675,7 +684,7 @@ export default function AdminPage() {
                         );
                         input.value = "";
                       }}
-                      className="w-full text-sm disabled:opacity-60"
+                      className="w-full text-sm disabled:opacity-60 file:mr-4 file:rounded-md file:border-0 file:bg-amber-200 file:px-4 file:py-2 file:font-bold file:text-black"
                     />
                   </div>
 
@@ -690,7 +699,8 @@ export default function AdminPage() {
         {/* ORDERS */}
         <div className="mt-12">
 
-          <h2 className="text-2xl font-bold mb-6 text-pink-400">
+          <h2 className="mb-6 flex items-center gap-3 text-2xl font-bold text-white">
+            <FiTruck className="text-amber-200" aria-hidden="true" />
             Orders
           </h2>
 
@@ -699,78 +709,78 @@ export default function AdminPage() {
             {orders.map((order) => (
               <div
                 key={order.id}
-                className="border border-pink-500 p-6 rounded"
+                className="rounded-lg border border-white/10 bg-white/[0.045] p-6 shadow-[0_20px_50px_rgba(0,0,0,0.24)]"
               >
 
-                <h3 className="text-xl font-bold">
+                <h3 className="text-xl font-bold text-white">
                   {order.product_name}
                 </h3>
 
-                <p className="mt-2">
+                <p className="mt-4 text-champagne/72">
                   Customer: {order.customer_name}
                 </p>
 
-                <p>
+                <p className="text-champagne/72">
                   Email: {order.customer_email}
                 </p>
 
-                <p>
+                <p className="text-champagne/72">
                   Phone: {order.customer_phone || "Not provided"}
                 </p>
 
-                <p>
+                <p className="text-champagne/72">
                   Address: {order.delivery_address || "Not provided"}
                 </p>
 
-                <p>
+                <p className="mt-3 font-black text-amber-200">
                   Amount: ₦{order.amount}
                 </p>
 
-                <p>
+                <p className="text-champagne/72">
                   Payment: {order.payment_status}
                 </p>
 
-                <p>
+                <p className="text-champagne/72">
                   Status: {order.order_status || "processing"}
                 </p>
 
-                <p>
-                  Vendor:{" "}
+                <p className="text-champagne/72">
+                  Fulfillment:{" "}
                   {order.assigned_vendor ||
                     "Not Assigned"}
                 </p>
 
                 {/* ASSIGN VENDOR */}
-                <div className="flex gap-2 mt-4 flex-wrap">
+                <div className="mt-4 flex flex-wrap gap-2">
 
                   <button
                     onClick={() =>
                       assignVendor(
                         order.id,
-                        "Vendor A"
+                        "Studio Desk A"
                       )
                     }
-                    className="bg-blue-500 text-black px-4 py-2 rounded"
+                    className="rounded-md bg-signal px-4 py-2 font-bold text-black"
                   >
-                    Assign Vendor A
+                    Assign Desk A
                   </button>
 
                   <button
                     onClick={() =>
                       assignVendor(
                         order.id,
-                        "Vendor B"
+                        "Studio Desk B"
                       )
                     }
-                    className="bg-green-500 text-black px-4 py-2 rounded"
+                    className="rounded-md bg-amber-200 px-4 py-2 font-bold text-black"
                   >
-                    Assign Vendor B
+                    Assign Desk B
                   </button>
 
                 </div>
 
                 {/* UPDATE STATUS */}
-                <div className="flex gap-2 mt-4 flex-wrap">
+                <div className="mt-4 flex flex-wrap gap-2">
 
                   <button
                     onClick={() =>
@@ -783,7 +793,7 @@ export default function AdminPage() {
                       updatingOrderId === order.id ||
                       (order.order_status || "processing") === "processing"
                     }
-                    className="bg-yellow-500 text-black px-4 py-2 rounded disabled:opacity-60"
+                    className="rounded-md border border-amber-200/45 px-4 py-2 font-bold text-amber-100 disabled:opacity-60"
                   >
                     Processing
                   </button>
@@ -799,7 +809,7 @@ export default function AdminPage() {
                       updatingOrderId === order.id ||
                       order.order_status === "delivered"
                     }
-                    className="bg-pink-500 text-black px-4 py-2 rounded disabled:opacity-60"
+                    className="rounded-md bg-amber-200 px-4 py-2 font-bold text-black disabled:opacity-60"
                   >
                     {order.order_status === "delivered"
                       ? "Delivered"

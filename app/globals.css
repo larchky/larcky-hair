@@ -3,6 +3,20 @@
 @tailwind utilities;
 
 body {
-  background: black;
-  color: white;
+  background:
+    radial-gradient(circle at top left, rgba(247, 216, 121, 0.12), transparent 34rem),
+    linear-gradient(135deg, #0b0a08 0%, #11100e 52%, #050504 100%);
+  color: #fff8e7;
+}
+
+::selection {
+  background: #f7d879;
+  color: #080706;
+}
+
+input,
+textarea,
+select,
+button {
+  font: inherit;
 }

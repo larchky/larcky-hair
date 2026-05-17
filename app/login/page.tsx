@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { supabase } from "@/lib/supabaseClient";
 import { useRouter } from "next/navigation";
+import { FiLock } from "react-icons/fi";
+import { supabase } from "@/lib/supabaseClient";
+import BrandLogo from "@/app/components/BrandLogo";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -25,32 +27,31 @@ export default function LoginPage() {
       return;
     }
 
-    // 🔍 DEBUG: check session immediately after login
-    const sessionCheck = await supabase.auth.getSession();
-    console.log("SESSION AFTER LOGIN:", sessionCheck.data.session);
-
-    const userCheck = await supabase.auth.getUser();
-    console.log("USER AFTER LOGIN:", userCheck.data.user);
-
     setLoading(false);
-
     router.push("/admin");
   };
 
   return (
-    <main className="min-h-screen bg-black text-white flex items-center justify-center">
-      <div className="bg-zinc-900 p-8 rounded-xl w-full max-w-md">
+    <main className="flex min-h-screen items-center justify-center bg-studio px-5 py-10 text-champagne">
+      <div className="w-full max-w-md rounded-lg border border-amber-200/25 bg-white/[0.045] p-7 shadow-[0_30px_80px_rgba(0,0,0,0.55)]">
+        <BrandLogo />
 
-        <h1 className="text-3xl font-bold text-pink-500 mb-6">
-          Admin Login
-        </h1>
+        <div className="mt-8">
+          <p className="flex items-center gap-2 text-sm font-black uppercase tracking-[0.22em] text-amber-200">
+            <FiLock aria-hidden="true" />
+            Admin Access
+          </p>
+          <h1 className="mt-2 text-3xl font-bold text-white">
+            Manage Dolapo stock
+          </h1>
+        </div>
 
         <input
           type="email"
           placeholder="Email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="w-full mb-4 p-3 rounded bg-black border border-pink-500"
+          className="mt-6 w-full rounded-md border border-amber-200/30 bg-black/45 p-3 text-white outline-none transition placeholder:text-champagne/35 focus:border-amber-200"
         />
 
         <input
@@ -58,17 +59,16 @@ export default function LoginPage() {
           placeholder="Password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          className="w-full mb-6 p-3 rounded bg-black border border-pink-500"
+          className="mt-4 w-full rounded-md border border-amber-200/30 bg-black/45 p-3 text-white outline-none transition placeholder:text-champagne/35 focus:border-amber-200"
         />
 
         <button
           onClick={handleLogin}
           disabled={loading}
-          className="w-full bg-pink-500 text-black py-3 rounded font-bold disabled:opacity-50"
+          className="mt-6 w-full rounded-md bg-amber-200 px-4 py-3 font-black uppercase tracking-[0.14em] text-black transition hover:bg-white disabled:opacity-50"
         >
           {loading ? "Logging in..." : "Login"}
         </button>
-
       </div>
     </main>
   );

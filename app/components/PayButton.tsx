@@ -2,6 +2,7 @@
 
 import { useFlutterwave, closePaymentModal } from "flutterwave-react-v3";
 import { useState, type ChangeEvent, type FormEvent } from "react";
+import { FiCreditCard, FiX } from "react-icons/fi";
 import { supabase } from "@/lib/supabaseClient";
 
 type Props = {
@@ -16,7 +17,7 @@ type CheckoutForm = {
   deliveryAddress: string;
 };
 
-const DEFAULT_PAYMENT_EMAIL = "buyer@lackyhair.com";
+const DEFAULT_PAYMENT_EMAIL = "buyer@dolapocreator.com";
 const INITIAL_ORDER_STATUS = "processing";
 const SUCCESSFUL_PAYMENT_STATUS = "successful";
 
@@ -38,6 +39,8 @@ export default function PayButton({ amount, productName }: Props) {
   const customerEmail = form.email.trim();
   const deliveryAddress = form.deliveryAddress.trim();
   const paymentEmail = customerEmail || DEFAULT_PAYMENT_EMAIL;
+  const paymentLogo =
+    typeof window !== "undefined" ? `${window.location.origin}/api/logo` : "";
 
   const config = {
     public_key: process.env.NEXT_PUBLIC_FLUTTERWAVE_PUBLIC_KEY!,
@@ -51,9 +54,9 @@ export default function PayButton({ amount, productName }: Props) {
       name: customerName,
     },
     customizations: {
-      title: "LACKY HAIR",
+      title: "DOLAPO",
       description: productName,
-      logo: "https://your-logo-url.com/logo.png",
+      logo: paymentLogo,
     },
   };
 
@@ -76,7 +79,7 @@ export default function PayButton({ amount, productName }: Props) {
   };
 
   const openCheckout = () => {
-    setTxRef(`LACKY-${Date.now()}-${Math.floor(Math.random() * 100000)}`);
+    setTxRef(`DOLAPO-${Date.now()}-${Math.floor(Math.random() * 100000)}`);
     setIsOpen(true);
   };
 
@@ -139,21 +142,27 @@ export default function PayButton({ amount, productName }: Props) {
       <button
         type="button"
         onClick={openCheckout}
-        className="bg-pink-500 text-black px-4 py-2 rounded"
+        className="inline-flex items-center justify-center gap-2 rounded-md bg-amber-200 px-4 py-2 text-sm font-black uppercase tracking-[0.12em] text-black transition hover:bg-white"
       >
+        <FiCreditCard aria-hidden="true" />
         Pay Now
       </button>
 
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/86 px-4 backdrop-blur-sm">
           <form
             onSubmit={handleSubmit}
-            className="w-full max-w-md rounded-xl bg-zinc-900 p-6 text-white"
+            className="w-full max-w-md rounded-lg border border-amber-200/25 bg-[#11100e] p-6 text-champagne shadow-[0_30px_80px_rgba(0,0,0,0.55)]"
           >
             <div className="mb-5 flex items-center justify-between gap-4">
-              <h2 className="text-xl font-bold text-pink-400">
-                Delivery Details
-              </h2>
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.2em] text-amber-200">
+                  Checkout
+                </p>
+                <h2 className="mt-1 text-xl font-bold text-white">
+                  Delivery Details
+                </h2>
+              </div>
 
               <button
                 type="button"
@@ -163,9 +172,10 @@ export default function PayButton({ amount, productName }: Props) {
                   }
                 }}
                 disabled={isSubmitting}
-                className="rounded bg-zinc-800 px-3 py-1 text-sm text-pink-200"
+                aria-label="Close checkout"
+                className="rounded-md border border-white/10 bg-white/[0.04] p-2 text-amber-100 transition hover:border-amber-200/50 disabled:opacity-50"
               >
-                Close
+                <FiX aria-hidden="true" />
               </button>
             </div>
 
@@ -175,7 +185,7 @@ export default function PayButton({ amount, productName }: Props) {
               value={form.name}
               onChange={handleChange}
               required
-              className="mb-4 w-full rounded border border-pink-500 bg-black p-3"
+              className="mb-4 w-full rounded-md border border-amber-200/30 bg-black/50 p-3 text-white outline-none transition placeholder:text-champagne/35 focus:border-amber-200"
             />
 
             <input
@@ -184,7 +194,7 @@ export default function PayButton({ amount, productName }: Props) {
               value={form.phone}
               onChange={handleChange}
               required
-              className="mb-4 w-full rounded border border-pink-500 bg-black p-3"
+              className="mb-4 w-full rounded-md border border-amber-200/30 bg-black/50 p-3 text-white outline-none transition placeholder:text-champagne/35 focus:border-amber-200"
             />
 
             <input
@@ -193,7 +203,7 @@ export default function PayButton({ amount, productName }: Props) {
               placeholder="Email (optional)"
               value={form.email}
               onChange={handleChange}
-              className="mb-4 w-full rounded border border-pink-500 bg-black p-3"
+              className="mb-4 w-full rounded-md border border-amber-200/30 bg-black/50 p-3 text-white outline-none transition placeholder:text-champagne/35 focus:border-amber-200"
             />
 
             <textarea
@@ -203,15 +213,20 @@ export default function PayButton({ amount, productName }: Props) {
               onChange={handleChange}
               required
               rows={4}
-              className="mb-5 w-full resize-none rounded border border-pink-500 bg-black p-3"
+              className="mb-5 w-full resize-none rounded-md border border-amber-200/30 bg-black/50 p-3 text-white outline-none transition placeholder:text-champagne/35 focus:border-amber-200"
             />
+
+            <div className="mb-5 rounded-md border border-amber-200/25 bg-amber-200/10 p-4 text-sm leading-6 text-amber-50">
+              Payment does not include delivery. You will be contacted by
+              Dolapo Store to make arrangements for delivery.
+            </div>
 
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full rounded bg-pink-500 px-4 py-3 font-bold text-black disabled:opacity-60"
+              className="w-full rounded-md bg-amber-200 px-4 py-3 font-black uppercase tracking-[0.14em] text-black transition hover:bg-white disabled:opacity-60"
             >
-              {isSubmitting ? "Opening payment..." : "Continue to Payment"}
+              {isSubmitting ? "Opening payment..." : "Proceed to Payment"}
             </button>
           </form>
         </div>
