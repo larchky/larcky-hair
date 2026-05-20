@@ -24,6 +24,22 @@ export default function ProductsPage() {
     };
 
     fetchProducts();
+
+    const paymentStatus = new URLSearchParams(window.location.search).get(
+      "payment"
+    );
+    const paymentMessages: Record<string, string> = {
+      success: "Payment successful! Your order has been received.",
+      unconfirmed:
+        "Payment was received, but the order could not be confirmed yet. Please contact Dolapo Store.",
+      failed: "Payment was not completed. Your order was not saved.",
+      cancelled: "Payment was cancelled. Your order was not saved.",
+    };
+
+    if (paymentStatus && paymentMessages[paymentStatus]) {
+      alert(paymentMessages[paymentStatus]);
+      window.history.replaceState(null, "", window.location.pathname);
+    }
   }, []);
 
   const normalizedSearch = searchTerm.trim().toLowerCase();

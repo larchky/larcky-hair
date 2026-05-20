@@ -14,11 +14,50 @@ type ConfirmOrderBody = {
   order?: OrderInput;
 };
 
+function redirectToProducts(request: Request, payment: string) {
+  const redirectUrl = new URL("/products", request.url);
+  redirectUrl.searchParams.set("payment", payment);
+
+  return Response.redirect(redirectUrl, 303);
+}
+
 function getTransactionId(body: ConfirmOrderBody) {
   const value = body.transactionId || body.transaction_id;
   return typeof value === "number" || typeof value === "string"
     ? String(value).trim()
     : "";
+}
+
+export async function GET(request: Request) {
+  const url = new URL(request.url);
+  const status = String(url.searchParams.get("status") || "").toLowerCase();
+  const transactionId = String(
+    url.searchParams.get("transaction_id") || url.searchParams.get("id") || ""
+  ).trim();
+  const txRef = String(
+    url.searchParams.get("tx_ref") || url.searchParams.get("txRef") || ""
+  ).trim();
+
+  if (status && status !== "successful") {
+    return redirectToProducts(
+      request,
+      status === "cancelled" ? "cancelled" : "failed"
+    );
+  }
+
+  if (!transactionId) {
+    return redirectToProducts(request, "failed");
+  }
+
+  try {
+    await processFlutterwaveOrder(transactionId, {
+      txRef: txRef || undefined,
+    });
+
+    return redirectToProducts(request, "success");
+  } catch {
+    return redirectToProducts(request, "unconfirmed");
+  }
 }
 
 export async function POST(request: Request) {

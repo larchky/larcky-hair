@@ -40,12 +40,17 @@ function PayButton({ amount, productName }: Props) {
   const paymentEmail = customerEmail || DEFAULT_PAYMENT_EMAIL;
   const paymentLogo =
     typeof window !== "undefined" ? `${window.location.origin}/api/logo` : "";
+  const paymentRedirectUrl =
+    typeof window !== "undefined"
+      ? `${window.location.origin}/api/orders/confirm`
+      : undefined;
 
   const config = {
     public_key: process.env.NEXT_PUBLIC_FLUTTERWAVE_PUBLIC_KEY!,
     tx_ref: txRef,
     amount,
     currency: "NGN",
+    redirect_url: paymentRedirectUrl,
     payment_options: "card,banktransfer,ussd",
     meta: {
       order_source: "dolapo_checkout",

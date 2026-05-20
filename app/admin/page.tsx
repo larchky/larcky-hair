@@ -80,6 +80,8 @@ export default function AdminPage() {
 
   const [orders, setOrders] = useState<Order[]>([]);
 
+  const [ordersError, setOrdersError] = useState("");
+
   const [saving, setSaving] = useState(false);
 
   const [updatingProductId, setUpdatingProductId] = useState<Product["id"] | null>(
@@ -102,19 +104,49 @@ export default function AdminPage() {
     }
   }, []);
 
+  const getAdminAccessToken = useCallback(async () => {
+    const { data } = await supabase.auth.getSession();
+    const token = data.session?.access_token;
+
+    if (!token) {
+      router.push("/login");
+      throw new Error("Please log in again to manage orders.");
+    }
+
+    return token;
+  }, [router]);
+
   // -----------------------------------
   // FETCH ORDERS
   // -----------------------------------
   const fetchOrders = useCallback(async () => {
-    const { data, error } = await supabase
-      .from("orders")
-      .select("*")
-      .order("created_at", { ascending: false });
+    setOrdersError("");
 
-    if (!error) {
-      setOrders(data || []);
+    try {
+      const token = await getAdminAccessToken();
+      const response = await fetch("/api/admin/orders", {
+        cache: "no-store",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const result = (await response.json().catch(() => null)) as {
+        orders?: Order[];
+        error?: string;
+      } | null;
+
+      if (!response.ok) {
+        throw new Error(result?.error || "Could not load orders.");
+      }
+
+      setOrders(result?.orders || []);
+    } catch (error) {
+      setOrders([]);
+      setOrdersError(
+        error instanceof Error ? error.message : "Could not load orders."
+      );
     }
-  }, []);
+  }, [getAdminAccessToken]);
 
   // -----------------------------------
   // AUTH CHECK
@@ -489,15 +521,24 @@ export default function AdminPage() {
     setUpdatingOrderId(id);
 
     try {
-      const { error } = await supabase
-        .from("orders")
-        .update({
+      const token = await getAdminAccessToken();
+      const response = await fetch("/api/admin/orders", {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          id,
           order_status: status,
-        })
-        .eq("id", id);
+        }),
+      });
+      const result = (await response.json().catch(() => null)) as {
+        error?: string;
+      } | null;
 
-      if (error) {
-        alert(error.message);
+      if (!response.ok) {
+        alert(result?.error || "Could not update order.");
         return;
       }
 
@@ -514,15 +555,33 @@ export default function AdminPage() {
     id: string,
     vendor: string
   ) => {
-    const { error } = await supabase
-      .from("orders")
-      .update({
-        assigned_vendor: vendor,
-      })
-      .eq("id", id);
+    try {
+      const token = await getAdminAccessToken();
+      const response = await fetch("/api/admin/orders", {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          id,
+          assigned_vendor: vendor,
+        }),
+      });
+      const result = (await response.json().catch(() => null)) as {
+        error?: string;
+      } | null;
 
-    if (!error) {
-      fetchOrders();
+      if (!response.ok) {
+        alert(result?.error || "Could not assign fulfillment.");
+        return;
+      }
+
+      await fetchOrders();
+    } catch (error) {
+      alert(
+        error instanceof Error ? error.message : "Could not assign fulfillment."
+      );
     }
   };
 
@@ -735,6 +794,12 @@ export default function AdminPage() {
             Orders
           </h2>
 
+          {ordersError && (
+            <div className="mb-6 rounded-lg border border-red-300/30 bg-red-500/10 p-4 text-sm font-semibold text-red-100">
+              {ordersError}
+            </div>
+          )}
+
           <div className="mb-6 grid gap-3 md:grid-cols-3">
             <div className="rounded-lg border border-white/10 bg-white/[0.045] p-4">
               <p className="flex items-center gap-2 text-sm font-bold text-champagne/70">
@@ -772,7 +837,7 @@ export default function AdminPage() {
 
           <div className="space-y-6">
 
-            {orders.length === 0 ? (
+            {orders.length === 0 && !ordersError ? (
               <div className="rounded-lg border border-amber-200/20 bg-white/[0.04] p-8 text-center">
                 <h3 className="text-2xl font-bold text-white">
                   No paid orders yet
