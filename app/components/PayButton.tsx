@@ -16,9 +16,13 @@ type CheckoutForm = {
   deliveryAddress: string;
 };
 
+type FlutterwavePaymentResponse = {
+  transaction_id?: number | string;
+  tx_ref?: string;
+};
+
 const DEFAULT_PAYMENT_EMAIL = "buyer@dolapocreator.com";
 const UNPROVIDED_EMAIL = "Not provided";
-const SUCCESSFUL_PAYMENT_STATUS = "successful";
 
 const emptyForm: CheckoutForm = {
   name: "",
@@ -92,10 +96,13 @@ function PayButton({ amount, productName }: Props) {
     setIsOpen(true);
   };
 
-  const confirmPaidOrder = async (paymentResponse: {
-    transaction_id: number;
-    tx_ref: string;
-  }) => {
+  const confirmPaidOrder = async (
+    paymentResponse: FlutterwavePaymentResponse
+  ) => {
+    if (!paymentResponse.transaction_id) {
+      throw new Error("Flutterwave did not return a transaction id.");
+    }
+
     const response = await fetch("/api/orders/confirm", {
       method: "POST",
       headers: {
@@ -103,7 +110,7 @@ function PayButton({ amount, productName }: Props) {
       },
       body: JSON.stringify({
         transactionId: paymentResponse.transaction_id,
-        txRef: paymentResponse.tx_ref,
+        txRef: paymentResponse.tx_ref || txRef,
         order: {
           productName,
           amount,
@@ -142,13 +149,6 @@ function PayButton({ amount, productName }: Props) {
 
     handleFlutterPayment({
       callback: async (response) => {
-        if (response.status?.toLowerCase() !== SUCCESSFUL_PAYMENT_STATUS) {
-          alert("Payment was not successful. Your order was not saved.");
-          setIsSubmitting(false);
-          closePaymentModal();
-          return;
-        }
-
         try {
           await confirmPaidOrder(response);
           alert("Payment successful! Your order has been received.");
@@ -156,8 +156,8 @@ function PayButton({ amount, productName }: Props) {
         } catch (error) {
           alert(
             error instanceof Error
-              ? `Payment succeeded but order save failed: ${error.message}`
-              : "Payment succeeded but order save failed."
+              ? `Payment could not be confirmed: ${error.message}`
+              : "Payment could not be confirmed."
           );
           setIsSubmitting(false);
         }
