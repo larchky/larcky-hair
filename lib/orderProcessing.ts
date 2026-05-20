@@ -6,6 +6,10 @@ const SUCCESSFUL_PAYMENT_STATUS = "successful";
 const INITIAL_ORDER_STATUS = "processing";
 const DEFAULT_CURRENCY = "NGN";
 const UNPROVIDED_EMAIL = "Not provided";
+const UNPROVIDED_CUSTOMER_NAME = "Not provided";
+const UNPROVIDED_CUSTOMER_PHONE = "Not provided";
+const UNPROVIDED_DELIVERY_ADDRESS = "Not provided";
+const FALLBACK_PRODUCT_NAME = "Paid order";
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -242,16 +246,19 @@ function normalizeVerifiedOrder(
   const productName =
     asOptionalString(fallback.productName) ||
     getMetaString(meta, ["product_name", "productName"]) ||
-    asOptionalString(verifiedTransaction.narration);
+    asOptionalString(verifiedTransaction.narration) ||
+    FALLBACK_PRODUCT_NAME;
   const customerName =
     asOptionalString(fallback.customerName) ||
     getMetaString(meta, ["customer_name", "customerName"]) ||
-    asOptionalString(customer?.name);
+    asOptionalString(customer?.name) ||
+    UNPROVIDED_CUSTOMER_NAME;
   const customerPhone =
     asOptionalString(fallback.customerPhone) ||
     getMetaString(meta, ["customer_phone", "customerPhone"]) ||
     asOptionalString(customer?.phone_number) ||
-    asOptionalString(customer?.phone);
+    asOptionalString(customer?.phone) ||
+    UNPROVIDED_CUSTOMER_PHONE;
   const customerEmail =
     asOptionalString(fallback.customerEmail) ||
     getMetaString(meta, ["customer_email", "customerEmail"]) ||
@@ -259,17 +266,11 @@ function normalizeVerifiedOrder(
     UNPROVIDED_EMAIL;
   const deliveryAddress =
     asOptionalString(fallback.deliveryAddress) ||
-    getMetaString(meta, ["delivery_address", "deliveryAddress"]);
+    getMetaString(meta, ["delivery_address", "deliveryAddress"]) ||
+    UNPROVIDED_DELIVERY_ADDRESS;
 
-  if (!productName || !isFiniteNumber(amount) || amount <= 0) {
+  if (!isFiniteNumber(amount) || amount <= 0) {
     throw new OrderProcessingError("The verified order is missing product details.", 422);
-  }
-
-  if (!customerName || !customerPhone || !deliveryAddress) {
-    throw new OrderProcessingError(
-      "The verified order is missing customer delivery details.",
-      422
-    );
   }
 
   return {
