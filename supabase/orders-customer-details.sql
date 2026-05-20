@@ -33,19 +33,13 @@ drop policy if exists "Customers can create paid orders" on public.orders;
 drop policy if exists "Admins can read orders" on public.orders;
 drop policy if exists "Admins can update orders" on public.orders;
 
-create policy "Customers can create paid orders"
-on public.orders
-for insert
-to anon, authenticated
-with check (
-  payment_status = 'successful'
-  and customer_name is not null
-  and length(trim(customer_name)) > 0
-  and customer_phone is not null
-  and length(trim(customer_phone)) > 0
-  and delivery_address is not null
-  and length(trim(delivery_address)) > 0
-);
+-- Orders are inserted by the Next.js server after Flutterwave verification.
+-- No anon/authenticated insert policy is created here; the service-role client
+-- used by /api/orders/confirm and /api/flutterwave/webhook bypasses RLS.
+
+create unique index if not exists orders_transaction_id_unique
+on public.orders (transaction_id)
+where transaction_id is not null;
 
 create policy "Admins can read orders"
 on public.orders

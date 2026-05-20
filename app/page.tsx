@@ -149,15 +149,16 @@ export default function Home() {
           </div>
         </div>
 
-        <div className="relative z-10 min-h-[21rem]">
+        <div className="relative z-10 min-h-[21rem] overflow-hidden">
           <Image
             src="/api/logo"
-            alt="Dolapo creator tools logo"
+            alt=""
+            aria-hidden="true"
             width={560}
             height={560}
             priority
             unoptimized
-            className="mx-auto w-full max-w-[25rem] drop-shadow-[0_30px_54px_rgba(0,0,0,0.65)]"
+            className="pointer-events-none mx-auto w-full max-w-[28rem] select-none opacity-[0.18] mix-blend-screen grayscale"
           />
 
           <div className="absolute bottom-4 left-1/2 flex w-[min(92%,25rem)] -translate-x-1/2 items-center justify-between rounded-md border border-amber-200/30 bg-black/72 px-4 py-3 text-sm shadow-2xl backdrop-blur">

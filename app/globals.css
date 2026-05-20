@@ -7,6 +7,7 @@ body {
     radial-gradient(circle at top left, rgba(247, 216, 121, 0.12), transparent 34rem),
     linear-gradient(135deg, #0b0a08 0%, #11100e 52%, #050504 100%);
   color: #fff8e7;
+  scrollbar-gutter: stable;
 }
 
 ::selection {

@@ -2,7 +2,15 @@
 
 import { useCallback, useEffect, useState, type ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
-import { FiLogOut, FiPackage, FiShoppingBag, FiTruck } from "react-icons/fi";
+import {
+  FiCheckCircle,
+  FiClock,
+  FiCreditCard,
+  FiLogOut,
+  FiPackage,
+  FiShoppingBag,
+  FiTruck,
+} from "react-icons/fi";
 import { supabase } from "@/lib/supabaseClient";
 import {
   getProductImageUrl,
@@ -27,6 +35,7 @@ const ADMIN_ACTIVITY_EVENTS = [
 
 type Order = {
   id: string;
+  created_at: string;
   product_name: string;
   amount: number;
   customer_email: string;
@@ -38,6 +47,19 @@ type Order = {
   order_status: string;
   assigned_vendor: string | null;
 };
+
+function formatOrderDate(value: string) {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "Date unavailable";
+  }
+
+  return new Intl.DateTimeFormat("en", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(date);
+}
 
 export default function AdminPage() {
   const router = useRouter();
@@ -504,6 +526,15 @@ export default function AdminPage() {
     }
   };
 
+  const deliveredOrderCount = orders.filter(
+    (order) => order.order_status === "delivered"
+  ).length;
+  const processingOrderCount = orders.length - deliveredOrderCount;
+  const totalOrderValue = orders.reduce(
+    (total, order) => total + Number(order.amount || 0),
+    0
+  );
+
   // -----------------------------------
   // LOADING
   // -----------------------------------
@@ -704,122 +735,232 @@ export default function AdminPage() {
             Orders
           </h2>
 
+          <div className="mb-6 grid gap-3 md:grid-cols-3">
+            <div className="rounded-lg border border-white/10 bg-white/[0.045] p-4">
+              <p className="flex items-center gap-2 text-sm font-bold text-champagne/70">
+                <FiCreditCard className="text-amber-200" aria-hidden="true" />
+                Paid orders
+              </p>
+              <p className="mt-2 text-3xl font-black text-white">
+                {orders.length}
+              </p>
+            </div>
+
+            <div className="rounded-lg border border-white/10 bg-white/[0.045] p-4">
+              <p className="flex items-center gap-2 text-sm font-bold text-champagne/70">
+                <FiClock className="text-amber-200" aria-hidden="true" />
+                Processing
+              </p>
+              <p className="mt-2 text-3xl font-black text-white">
+                {processingOrderCount}
+              </p>
+            </div>
+
+            <div className="rounded-lg border border-white/10 bg-white/[0.045] p-4">
+              <p className="flex items-center gap-2 text-sm font-bold text-champagne/70">
+                <FiCheckCircle className="text-amber-200" aria-hidden="true" />
+                Delivered
+              </p>
+              <p className="mt-2 text-3xl font-black text-white">
+                {deliveredOrderCount}
+              </p>
+              <p className="mt-1 text-sm text-champagne/55">
+                NGN {totalOrderValue.toLocaleString()}
+              </p>
+            </div>
+          </div>
+
           <div className="space-y-6">
 
-            {orders.map((order) => (
-              <div
-                key={order.id}
-                className="rounded-lg border border-white/10 bg-white/[0.045] p-6 shadow-[0_20px_50px_rgba(0,0,0,0.24)]"
-              >
-
-                <h3 className="text-xl font-bold text-white">
-                  {order.product_name}
+            {orders.length === 0 ? (
+              <div className="rounded-lg border border-amber-200/20 bg-white/[0.04] p-8 text-center">
+                <h3 className="text-2xl font-bold text-white">
+                  No paid orders yet
                 </h3>
-
-                <p className="mt-4 text-champagne/72">
-                  Customer: {order.customer_name}
+                <p className="mx-auto mt-2 max-w-lg text-champagne/65">
+                  Successful Flutterwave payments will appear here after the
+                  transaction is verified.
                 </p>
-
-                <p className="text-champagne/72">
-                  Email: {order.customer_email}
-                </p>
-
-                <p className="text-champagne/72">
-                  Phone: {order.customer_phone || "Not provided"}
-                </p>
-
-                <p className="text-champagne/72">
-                  Address: {order.delivery_address || "Not provided"}
-                </p>
-
-                <p className="mt-3 font-black text-amber-200">
-                  Amount: ₦{order.amount}
-                </p>
-
-                <p className="text-champagne/72">
-                  Payment: {order.payment_status}
-                </p>
-
-                <p className="text-champagne/72">
-                  Status: {order.order_status || "processing"}
-                </p>
-
-                <p className="text-champagne/72">
-                  Fulfillment:{" "}
-                  {order.assigned_vendor ||
-                    "Not Assigned"}
-                </p>
-
-                {/* ASSIGN VENDOR */}
-                <div className="mt-4 flex flex-wrap gap-2">
-
-                  <button
-                    onClick={() =>
-                      assignVendor(
-                        order.id,
-                        "Studio Desk A"
-                      )
-                    }
-                    className="rounded-md bg-signal px-4 py-2 font-bold text-black"
-                  >
-                    Assign Desk A
-                  </button>
-
-                  <button
-                    onClick={() =>
-                      assignVendor(
-                        order.id,
-                        "Studio Desk B"
-                      )
-                    }
-                    className="rounded-md bg-amber-200 px-4 py-2 font-bold text-black"
-                  >
-                    Assign Desk B
-                  </button>
-
-                </div>
-
-                {/* UPDATE STATUS */}
-                <div className="mt-4 flex flex-wrap gap-2">
-
-                  <button
-                    onClick={() =>
-                      updateOrderStatus(
-                        order.id,
-                        "processing"
-                      )
-                    }
-                    disabled={
-                      updatingOrderId === order.id ||
-                      (order.order_status || "processing") === "processing"
-                    }
-                    className="rounded-md border border-amber-200/45 px-4 py-2 font-bold text-amber-100 disabled:opacity-60"
-                  >
-                    Processing
-                  </button>
-
-                  <button
-                    onClick={() =>
-                      updateOrderStatus(
-                        order.id,
-                        "delivered"
-                      )
-                    }
-                    disabled={
-                      updatingOrderId === order.id ||
-                      order.order_status === "delivered"
-                    }
-                    className="rounded-md bg-amber-200 px-4 py-2 font-bold text-black disabled:opacity-60"
-                  >
-                    {order.order_status === "delivered"
-                      ? "Delivered"
-                      : "Mark Delivered"}
-                  </button>
-
-                </div>
-
               </div>
-            ))}
+            ) : (
+              orders.map((order) => {
+                const isDelivered = order.order_status === "delivered";
+
+                return (
+                  <div
+                    key={order.id}
+                    className="rounded-lg border border-white/10 bg-white/[0.045] p-6 shadow-[0_20px_50px_rgba(0,0,0,0.24)]"
+                  >
+
+                    <div className="flex flex-col justify-between gap-4 md:flex-row md:items-start">
+                      <div>
+                        <p className="text-xs font-black uppercase tracking-[0.22em] text-amber-200">
+                          Order report
+                        </p>
+                        <h3 className="mt-2 text-2xl font-bold text-white">
+                          {order.product_name}
+                        </h3>
+                        <p className="mt-1 text-sm text-champagne/55">
+                          {formatOrderDate(order.created_at)}
+                        </p>
+                      </div>
+
+                      <span
+                        className={[
+                          "inline-flex w-fit items-center gap-2 rounded-md px-3 py-2 text-sm font-black uppercase tracking-[0.12em]",
+                          isDelivered
+                            ? "bg-emerald-300 text-emerald-950"
+                            : "bg-amber-200 text-black",
+                        ].join(" ")}
+                      >
+                        {isDelivered ? (
+                          <FiCheckCircle aria-hidden="true" />
+                        ) : (
+                          <FiClock aria-hidden="true" />
+                        )}
+                        {isDelivered ? "Delivered" : "Processing"}
+                      </span>
+                    </div>
+
+                    <dl className="mt-6 grid gap-x-6 gap-y-4 md:grid-cols-2">
+                      <div>
+                        <dt className="text-xs font-black uppercase tracking-[0.18em] text-champagne/45">
+                          Customer
+                        </dt>
+                        <dd className="mt-1 text-white">
+                          {order.customer_name}
+                        </dd>
+                      </div>
+
+                      <div>
+                        <dt className="text-xs font-black uppercase tracking-[0.18em] text-champagne/45">
+                          Amount
+                        </dt>
+                        <dd className="mt-1 font-black text-amber-200">
+                          NGN {Number(order.amount || 0).toLocaleString()}
+                        </dd>
+                      </div>
+
+                      <div>
+                        <dt className="text-xs font-black uppercase tracking-[0.18em] text-champagne/45">
+                          Email
+                        </dt>
+                        <dd className="mt-1 break-words text-champagne/78">
+                          {order.customer_email}
+                        </dd>
+                      </div>
+
+                      <div>
+                        <dt className="text-xs font-black uppercase tracking-[0.18em] text-champagne/45">
+                          Phone
+                        </dt>
+                        <dd className="mt-1 text-champagne/78">
+                          {order.customer_phone || "Not provided"}
+                        </dd>
+                      </div>
+
+                      <div className="md:col-span-2">
+                        <dt className="text-xs font-black uppercase tracking-[0.18em] text-champagne/45">
+                          Delivery address
+                        </dt>
+                        <dd className="mt-1 text-champagne/78">
+                          {order.delivery_address || "Not provided"}
+                        </dd>
+                      </div>
+
+                      <div>
+                        <dt className="text-xs font-black uppercase tracking-[0.18em] text-champagne/45">
+                          Transaction
+                        </dt>
+                        <dd className="mt-1 break-all text-champagne/78">
+                          {order.transaction_id}
+                        </dd>
+                      </div>
+
+                      <div>
+                        <dt className="text-xs font-black uppercase tracking-[0.18em] text-champagne/45">
+                          Payment
+                        </dt>
+                        <dd className="mt-1 text-champagne/78">
+                          {order.payment_status}
+                        </dd>
+                      </div>
+
+                      <div>
+                        <dt className="text-xs font-black uppercase tracking-[0.18em] text-champagne/45">
+                          Fulfillment
+                        </dt>
+                        <dd className="mt-1 text-champagne/78">
+                          {order.assigned_vendor || "Not assigned"}
+                        </dd>
+                      </div>
+                    </dl>
+
+                    <div className="mt-6 flex flex-wrap gap-2 border-t border-white/10 pt-5">
+                      <button
+                        onClick={() =>
+                          assignVendor(
+                            order.id,
+                            "Studio Desk A"
+                          )
+                        }
+                        className="rounded-md bg-signal px-4 py-2 font-bold text-black"
+                      >
+                        Assign Desk A
+                      </button>
+
+                      <button
+                        onClick={() =>
+                          assignVendor(
+                            order.id,
+                            "Studio Desk B"
+                          )
+                        }
+                        className="rounded-md bg-amber-200 px-4 py-2 font-bold text-black"
+                      >
+                        Assign Desk B
+                      </button>
+
+                      <button
+                        onClick={() =>
+                          updateOrderStatus(
+                            order.id,
+                            "processing"
+                          )
+                        }
+                        disabled={
+                          updatingOrderId === order.id ||
+                          (order.order_status || "processing") === "processing"
+                        }
+                        className="rounded-md border border-amber-200/45 px-4 py-2 font-bold text-amber-100 disabled:opacity-60"
+                      >
+                        Processing
+                      </button>
+
+                      <button
+                        onClick={() =>
+                          updateOrderStatus(
+                            order.id,
+                            "delivered"
+                          )
+                        }
+                        disabled={
+                          updatingOrderId === order.id ||
+                          order.order_status === "delivered"
+                        }
+                        className="inline-flex items-center gap-2 rounded-md bg-amber-200 px-4 py-2 font-bold text-black disabled:opacity-60"
+                      >
+                        <FiCheckCircle aria-hidden="true" />
+                        {order.order_status === "delivered"
+                          ? "Delivered"
+                          : "Mark Delivered"}
+                      </button>
+                    </div>
+
+                  </div>
+                );
+              })
+            )}
 
           </div>
 

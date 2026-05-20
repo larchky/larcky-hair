@@ -3,7 +3,6 @@
 import { useFlutterwave, closePaymentModal } from "flutterwave-react-v3";
 import { useState, type ChangeEvent, type FormEvent } from "react";
 import { FiCreditCard, FiX } from "react-icons/fi";
-import { supabase } from "@/lib/supabaseClient";
 
 type Props = {
   amount: number;
@@ -18,7 +17,7 @@ type CheckoutForm = {
 };
 
 const DEFAULT_PAYMENT_EMAIL = "buyer@dolapocreator.com";
-const INITIAL_ORDER_STATUS = "processing";
+const UNPROVIDED_EMAIL = "Not provided";
 const SUCCESSFUL_PAYMENT_STATUS = "successful";
 
 const emptyForm: CheckoutForm = {
@@ -28,7 +27,7 @@ const emptyForm: CheckoutForm = {
   deliveryAddress: "",
 };
 
-export default function PayButton({ amount, productName }: Props) {
+function PayButton({ amount, productName }: Props) {
   const [form, setForm] = useState(emptyForm);
   const [isOpen, setIsOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -48,6 +47,17 @@ export default function PayButton({ amount, productName }: Props) {
     amount,
     currency: "NGN",
     payment_options: "card,banktransfer,ussd",
+    meta: {
+      order_source: "dolapo_checkout",
+      product_name: productName,
+      order_amount: amount,
+      customer_name: customerName,
+      customer_phone: customerPhone,
+      customer_email: customerEmail || UNPROVIDED_EMAIL,
+      delivery_address: deliveryAddress,
+      tx_ref: txRef,
+      currency: "NGN",
+    },
     customer: {
       email: paymentEmail,
       phone_number: customerPhone,
@@ -83,6 +93,39 @@ export default function PayButton({ amount, productName }: Props) {
     setIsOpen(true);
   };
 
+  const confirmPaidOrder = async (paymentResponse: {
+    transaction_id: number;
+    tx_ref: string;
+  }) => {
+    const response = await fetch("/api/orders/confirm", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        transactionId: paymentResponse.transaction_id,
+        txRef: paymentResponse.tx_ref,
+        order: {
+          productName,
+          amount,
+          customerName,
+          customerPhone,
+          customerEmail: customerEmail || UNPROVIDED_EMAIL,
+          deliveryAddress,
+          currency: "NGN",
+        },
+      }),
+    });
+
+    const result = (await response.json().catch(() => null)) as {
+      error?: string;
+    } | null;
+
+    if (!response.ok) {
+      throw new Error(result?.error || "Payment could not be confirmed.");
+    }
+  };
+
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
@@ -107,26 +150,17 @@ export default function PayButton({ amount, productName }: Props) {
           return;
         }
 
-        const { error } = await supabase.from("orders").insert([
-          {
-            product_name: productName,
-            amount,
-            customer_email: customerEmail || "Not provided",
-            customer_name: customerName,
-            customer_phone: customerPhone,
-            delivery_address: deliveryAddress,
-            payment_status: SUCCESSFUL_PAYMENT_STATUS,
-            transaction_id: String(response.transaction_id),
-            order_status: INITIAL_ORDER_STATUS,
-          },
-        ]);
-
-        if (error) {
-          alert(`Payment succeeded but order save failed: ${error.message}`);
-          setIsSubmitting(false);
-        } else {
+        try {
+          await confirmPaidOrder(response);
           alert("Payment successful! Your order has been received.");
           resetCheckout();
+        } catch (error) {
+          alert(
+            error instanceof Error
+              ? `Payment succeeded but order save failed: ${error.message}`
+              : "Payment succeeded but order save failed."
+          );
+          setIsSubmitting(false);
         }
 
         closePaymentModal();
@@ -149,7 +183,7 @@ export default function PayButton({ amount, productName }: Props) {
       </button>
 
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/86 px-4 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/[0.86] px-4 backdrop-blur-sm">
           <form
             onSubmit={handleSubmit}
             className="w-full max-w-md rounded-lg border border-amber-200/25 bg-[#11100e] p-6 text-champagne shadow-[0_30px_80px_rgba(0,0,0,0.55)]"
@@ -234,3 +268,6 @@ export default function PayButton({ amount, productName }: Props) {
     </>
   );
 }
+
+export { PayButton };
+export default PayButton;

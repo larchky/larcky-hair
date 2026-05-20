@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import Script from "next/script";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -13,9 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Dolapo | Creator Tools",
-  description:
-    "Premium content creation tools for creators, streamers, and studios.",
+  title: "Lacky Hair",
+  description: "Luxury hair store",
 };
 
 export default function RootLayout({
@@ -28,7 +28,12 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        {/* Paystack script */}
+        <Script src="https://js.paystack.co/v1/inline.js" />
+
+        {children}
+      </body>
     </html>
   );
 }
