@@ -91,8 +91,6 @@ export default function Home() {
       </header>
 
       <section className="relative mx-auto grid w-full max-w-7xl gap-10 px-5 pb-12 pt-8 sm:px-8 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
-        <div className="absolute right-[-18rem] top-[-12rem] h-[44rem] w-[44rem] rounded-full border border-amber-200/10 bg-amber-200/5 blur-3xl" />
-
         <div className="relative z-10">
           <p className="mb-4 inline-flex items-center gap-2 rounded-md border border-amber-200/25 bg-white/5 px-3 py-2 text-xs font-bold uppercase tracking-[0.24em] text-amber-200">
             <FiCamera aria-hidden="true" />
@@ -158,10 +156,10 @@ export default function Home() {
             height={560}
             priority
             unoptimized
-            className="pointer-events-none mx-auto w-full max-w-[28rem] select-none opacity-[0.18] mix-blend-screen grayscale"
+            className="pointer-events-none mx-auto w-full max-w-[28rem] select-none opacity-[0.16] grayscale"
           />
 
-          <div className="absolute bottom-4 left-1/2 flex w-[min(92%,25rem)] -translate-x-1/2 items-center justify-between rounded-md border border-amber-200/30 bg-black/72 px-4 py-3 text-sm shadow-2xl backdrop-blur">
+          <div className="absolute bottom-4 left-1/2 flex w-[min(92%,25rem)] -translate-x-1/2 items-center justify-between rounded-md border border-amber-200/30 bg-black/85 px-4 py-3 text-sm shadow-[0_18px_34px_rgba(0,0,0,0.42)]">
             <span className="font-semibold text-amber-100">Ready-made kits</span>
             <span className="text-champagne/70">shoot, stream, record</span>
           </div>

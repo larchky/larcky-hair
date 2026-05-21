@@ -1,7 +1,12 @@
 "use client";
 
 import { useFlutterwave, closePaymentModal } from "flutterwave-react-v3";
-import { useState, type ChangeEvent, type FormEvent } from "react";
+import {
+  useEffect,
+  useState,
+  type ChangeEvent,
+  type FormEvent,
+} from "react";
 import { FiCreditCard, FiX } from "react-icons/fi";
 
 type Props = {
@@ -36,6 +41,40 @@ function PayButton({ amount, productName }: Props) {
   const [isOpen, setIsOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [txRef, setTxRef] = useState("pending");
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const bodyOverflow = document.body.style.overflow;
+    const bodyPaddingRight = document.body.style.paddingRight;
+    const bodyPosition = document.body.style.position;
+    const bodyTop = document.body.style.top;
+    const bodyWidth = document.body.style.width;
+    const htmlOverflow = document.documentElement.style.overflow;
+    const scrollY = window.scrollY;
+    const scrollbarWidth =
+      window.innerWidth - document.documentElement.clientWidth;
+
+    document.body.style.overflow = "hidden";
+    document.body.style.position = "fixed";
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.width = "100%";
+    document.documentElement.style.overflow = "hidden";
+
+    if (scrollbarWidth > 0) {
+      document.body.style.paddingRight = `${scrollbarWidth}px`;
+    }
+
+    return () => {
+      document.body.style.overflow = bodyOverflow;
+      document.body.style.paddingRight = bodyPaddingRight;
+      document.body.style.position = bodyPosition;
+      document.body.style.top = bodyTop;
+      document.body.style.width = bodyWidth;
+      document.documentElement.style.overflow = htmlOverflow;
+      window.scrollTo(0, scrollY);
+    };
+  }, [isOpen]);
 
   const customerName = form.name.trim();
   const customerPhone = form.phone.trim();
@@ -182,10 +221,10 @@ function PayButton({ amount, productName }: Props) {
       </button>
 
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/[0.86] px-4 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 bg-black/90 px-4">
           <form
             onSubmit={handleSubmit}
-            className="w-full max-w-md rounded-lg border border-amber-200/25 bg-[#11100e] p-6 text-champagne shadow-[0_30px_80px_rgba(0,0,0,0.55)]"
+            className="fixed left-1/2 top-1/2 max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-lg border border-amber-200/25 bg-[#11100e] p-6 text-champagne shadow-[0_18px_42px_rgba(0,0,0,0.48)]"
           >
             <div className="mb-5 flex items-center justify-between gap-4">
               <div>

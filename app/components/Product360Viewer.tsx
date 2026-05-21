@@ -1,7 +1,8 @@
 "use client";
 
+/* eslint-disable @next/next/no-img-element */
+
 import {
-  useEffect,
   useMemo,
   useState,
   type KeyboardEvent,
@@ -42,13 +43,6 @@ export default function Product360Viewer({
   const [frameIndex, setFrameIndex] = useState(0);
   const [dragState, setDragState] = useState<DragState | null>(null);
 
-  useEffect(() => {
-    frames.forEach((frameUrl) => {
-      const image = new Image();
-      image.src = frameUrl;
-    });
-  }, [frames]);
-
   if (!frames.length) return null;
 
   const activeFrame = frames[wrapIndex(frameIndex, frames.length)];
@@ -57,7 +51,6 @@ export default function Product360Viewer({
   const handlePointerDown = (event: PointerEvent<HTMLDivElement>) => {
     if (!isInteractive) return;
 
-    event.currentTarget.setPointerCapture(event.pointerId);
     setDragState({
       baseIndex: frameIndex,
       startX: event.clientX,
@@ -70,11 +63,11 @@ export default function Product360Viewer({
 
     const horizontalDelta = event.clientX - dragState.startX;
     const verticalDelta = dragState.startY - event.clientY;
-    const dominantDelta =
-      Math.abs(verticalDelta) > Math.abs(horizontalDelta)
-        ? verticalDelta
-        : horizontalDelta;
-    const draggedFrames = Math.round(dominantDelta / 18);
+
+    if (Math.abs(horizontalDelta) < 10) return;
+    if (Math.abs(verticalDelta) > Math.abs(horizontalDelta)) return;
+
+    const draggedFrames = Math.round(horizontalDelta / 18);
 
     setFrameIndex(wrapIndex(dragState.baseIndex + draggedFrames, frames.length));
   };
@@ -108,14 +101,19 @@ export default function Product360Viewer({
       onPointerUp={clearDragState}
       onPointerCancel={clearDragState}
       className={[
-        "h-40 w-full select-none rounded-md border border-white/10 bg-zinc-950 bg-contain bg-center bg-no-repeat outline-none ring-amber-200 transition-shadow focus-visible:ring-2",
+        "h-40 w-full select-none overflow-hidden rounded-md border border-white/10 bg-zinc-950 outline-none ring-amber-200 focus-visible:ring-2",
         isInteractive ? "cursor-grab active:cursor-grabbing" : "",
         className,
       ].join(" ")}
-      style={{
-        backgroundImage: `url("${activeFrame}")`,
-        touchAction: isInteractive ? "none" : "auto",
-      }}
-    />
+      style={{ touchAction: isInteractive ? "pan-y" : "auto" }}
+    >
+      <img
+        alt=""
+        aria-hidden="true"
+        draggable={false}
+        src={activeFrame}
+        className="h-full w-full object-contain"
+      />
+    </div>
   );
 }
