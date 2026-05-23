@@ -14,6 +14,7 @@ import {
 import { supabase } from "@/lib/supabaseClient";
 import {
   getProductImageUrl,
+  getProductImageRows,
   getProductImageUrls,
   type Product,
 } from "@/lib/productImages";
@@ -234,6 +235,10 @@ export default function Home() {
               const rotationImageUrls = getProductImageUrls(
                 p.rotation_image_urls
               );
+              const rotationImageRows = getProductImageRows(
+                p.rotation_image_rows,
+                p.rotation_image_urls
+              );
 
               return (
                 <article
@@ -244,6 +249,7 @@ export default function Home() {
                     alt={p.name}
                     imageUrl={imageUrl}
                     frameUrls={rotationImageUrls}
+                    frameRows={rotationImageRows}
                     className="h-60 rounded-md"
                   />
 

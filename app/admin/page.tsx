@@ -14,6 +14,7 @@ import {
 import { supabase } from "@/lib/supabaseClient";
 import {
   getProductImageUrl,
+  getProductImageRows,
   getProductImageUrls,
   PRODUCT_IMAGE_BUCKET,
   type Product,
@@ -32,6 +33,149 @@ const ADMIN_ACTIVITY_EVENTS = [
   "scroll",
   "touchstart",
 ] as const;
+
+const ROTATION_ROW_LABELS = [
+  "Low angle row",
+  "Straight angle row",
+  "High angle row",
+] as const;
+
+const MAIN_IMAGE_COMPRESSION = {
+  maxDimension: 1400,
+  quality: 0.86,
+};
+
+const ROTATION_IMAGE_COMPRESSION = {
+  maxDimension: 900,
+  quality: 0.78,
+};
+
+type ImageCompressionOptions = {
+  maxDimension: number;
+  quality: number;
+};
+
+type LoadedImageSource = HTMLImageElement | ImageBitmap;
+
+function createEmptyRotationImageRows() {
+  return ROTATION_ROW_LABELS.map(() => [] as File[]);
+}
+
+function getCompressedFileName(fileName: string) {
+  return fileName.replace(/\.[^.]+$/, "") + ".webp";
+}
+
+function getImageSourceSize(source: LoadedImageSource) {
+  if (source instanceof HTMLImageElement) {
+    return {
+      height: source.naturalHeight,
+      width: source.naturalWidth,
+    };
+  }
+
+  return {
+    height: Number(source.height),
+    width: Number(source.width),
+  };
+}
+
+function loadImageSource(file: File): Promise<LoadedImageSource> {
+  if ("createImageBitmap" in window) {
+    return createImageBitmap(file);
+  }
+
+  return new Promise<HTMLImageElement>((resolve, reject) => {
+    const image = new Image();
+    const imageUrl = URL.createObjectURL(file);
+
+    image.onload = () => {
+      URL.revokeObjectURL(imageUrl);
+      resolve(image);
+    };
+    image.onerror = () => {
+      URL.revokeObjectURL(imageUrl);
+      reject(new Error("Could not read image."));
+    };
+    image.src = imageUrl;
+  });
+}
+
+function canvasToBlob(
+  canvas: HTMLCanvasElement,
+  type: string,
+  quality: number
+) {
+  return new Promise<Blob | null>((resolve) => {
+    canvas.toBlob(resolve, type, quality);
+  });
+}
+
+async function compressImageFile(
+  file: File,
+  options: ImageCompressionOptions
+) {
+  if (!file.type.startsWith("image/") || file.type === "image/svg+xml") {
+    return file;
+  }
+
+  const imageSource = await loadImageSource(file);
+  const { height, width } = getImageSourceSize(imageSource);
+
+  if (!height || !width) return file;
+
+  const scale = Math.min(1, options.maxDimension / Math.max(width, height));
+  const targetWidth = Math.max(1, Math.round(width * scale));
+  const targetHeight = Math.max(1, Math.round(height * scale));
+  const canvas = document.createElement("canvas");
+  const context = canvas.getContext("2d");
+
+  if (!context) return file;
+
+  canvas.width = targetWidth;
+  canvas.height = targetHeight;
+  context.drawImage(imageSource, 0, 0, targetWidth, targetHeight);
+
+  if (imageSource instanceof ImageBitmap) {
+    imageSource.close();
+  }
+
+  const blob = await canvasToBlob(canvas, "image/webp", options.quality);
+
+  if (!blob || blob.size >= file.size) {
+    return file;
+  }
+
+  return new File([blob], getCompressedFileName(file.name), {
+    lastModified: Date.now(),
+    type: "image/webp",
+  });
+}
+
+function sortFilesByName(files: File[]) {
+  return [...files].sort((first, second) =>
+    first.name.localeCompare(second.name, undefined, {
+      numeric: true,
+      sensitivity: "base",
+    })
+  );
+}
+
+function countRotationRowFiles(rows: File[][]) {
+  return rows.reduce((count, row) => count + row.length, 0);
+}
+
+function countRotationRows(rows?: string[][] | null) {
+  return (rows || []).filter((row) => row.length > 0).length;
+}
+
+function getProductRotationPaths(product: Product) {
+  return Array.from(
+    new Set([
+      ...(product.rotation_image_urls || []),
+      ...(product.rotation_image_rows || []).flat(),
+    ])
+  );
+}
 
 type Order = {
   id: string;
@@ -74,7 +218,9 @@ export default function AdminPage() {
 
   const [image, setImage] = useState<File | null>(null);
 
-  const [rotationImages, setRotationImages] = useState<File[]>([]);
+  const [rotationImageRows, setRotationImageRows] = useState<File[][]>(
+    createEmptyRotationImageRows
+  );
 
   const [products, setProducts] = useState<Product[]>([]);
 
@@ -87,6 +233,10 @@ export default function AdminPage() {
   const [updatingProductId, setUpdatingProductId] = useState<Product["id"] | null>(
     null
   );
+
+  const [productRotationRows, setProductRotationRows] = useState<
+    Record<string, File[][]>
+  >({});
 
   const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
 
@@ -303,7 +453,10 @@ export default function AdminPage() {
   // -----------------------------------
   // UPLOAD IMAGE
   // -----------------------------------
-  const uploadImageFile = async (file: File) => {
+  const uploadImageFile = async (
+    file: File,
+    compressionOptions: ImageCompressionOptions
+  ) => {
     const { data: sessionData } =
       await supabase.auth.getSession();
 
@@ -316,8 +469,9 @@ export default function AdminPage() {
     }
 
     const formData = new FormData();
+    const uploadFile = await compressImageFile(file, compressionOptions);
 
-    formData.append("image", file);
+    formData.append("image", uploadFile);
 
     const response = await fetch(
       "/api/admin/upload-product-image",
@@ -347,7 +501,56 @@ export default function AdminPage() {
   const uploadImage = async () => {
     if (!image) return null;
 
-    return uploadImageFile(image);
+    return uploadImageFile(image, MAIN_IMAGE_COMPRESSION);
+  };
+
+  const uploadRotationImageRows = async (rows: File[][]) => {
+    const uploadedRows: string[][] = [];
+
+    for (const row of rows) {
+      const uploadedRow: string[] = [];
+
+      for (const rotationImage of row) {
+        uploadedRow.push(
+          await uploadImageFile(rotationImage, ROTATION_IMAGE_COMPRESSION)
+        );
+      }
+
+      if (uploadedRow.length > 0) {
+        uploadedRows.push(uploadedRow);
+      }
+    }
+
+    return uploadedRows;
+  };
+
+  const updateNewProductRotationRow = (rowIndex: number, files: File[]) => {
+    setRotationImageRows((currentRows) =>
+      currentRows.map((row, index) =>
+        index === rowIndex ? sortFilesByName(files) : row
+      )
+    );
+  };
+
+  const updateExistingProductRotationRow = (
+    productId: Product["id"],
+    rowIndex: number,
+    files: File[]
+  ) => {
+    const productKey = String(productId);
+
+    setProductRotationRows((currentRows) => {
+      const selectedRows =
+        currentRows[productKey]?.map((row) => [...row]) ||
+        createEmptyRotationImageRows();
+
+      selectedRows[rowIndex] = sortFilesByName(files);
+
+      return {
+        ...currentRows,
+        [productKey]: selectedRows,
+      };
+    });
   };
 
   // -----------------------------------
@@ -364,14 +567,11 @@ export default function AdminPage() {
     setSaving(true);
 
     let imagePath: string | null = null;
-    const rotationImagePaths: string[] = [];
+    let rotationImageRowsPaths: string[][] = [];
 
     try {
       imagePath = await uploadImage();
-
-      for (const rotationImage of rotationImages) {
-        rotationImagePaths.push(await uploadImageFile(rotationImage));
-      }
+      rotationImageRowsPaths = await uploadRotationImageRows(rotationImageRows);
 
       const { error } = await supabase
         .from("products")
@@ -381,7 +581,8 @@ export default function AdminPage() {
             price: Number(form.price),
             description: form.description.trim(),
             image_url: imagePath,
-            rotation_image_urls: rotationImagePaths,
+            rotation_image_urls: rotationImageRowsPaths.flat(),
+            rotation_image_rows: rotationImageRowsPaths,
           },
         ]);
 
@@ -398,11 +599,11 @@ export default function AdminPage() {
       });
 
       setImage(null);
-      setRotationImages([]);
+      setRotationImageRows(createEmptyRotationImageRows());
 
       fetchProducts();
     } catch (error) {
-      const uploadedPaths = [imagePath, ...rotationImagePaths].filter(
+      const uploadedPaths = [imagePath, ...rotationImageRowsPaths.flat()].filter(
         (path): path is string => Boolean(path)
       );
 
@@ -436,7 +637,7 @@ export default function AdminPage() {
 
     const productImagePaths = [
       product.image_url,
-      ...(product.rotation_image_urls || []),
+      ...getProductRotationPaths(product),
     ].filter((path): path is string => Boolean(path));
 
     if (productImagePaths.length) {
@@ -463,23 +664,22 @@ export default function AdminPage() {
   // -----------------------------------
   const updateProductRotationImages = async (
     product: Product,
-    files: File[]
+    rows: File[][]
   ) => {
-    if (!files.length || updatingProductId) return;
+    if (!countRotationRowFiles(rows) || updatingProductId) return;
 
     setUpdatingProductId(product.id);
 
-    const newImagePaths: string[] = [];
+    let newImageRows: string[][] = [];
 
     try {
-      for (const file of files) {
-        newImagePaths.push(await uploadImageFile(file));
-      }
+      newImageRows = await uploadRotationImageRows(rows);
 
       const { error } = await supabase
         .from("products")
         .update({
-          rotation_image_urls: newImagePaths,
+          rotation_image_urls: newImageRows.flat(),
+          rotation_image_rows: newImageRows,
         })
         .eq("id", product.id);
 
@@ -487,18 +687,26 @@ export default function AdminPage() {
         throw new Error(error.message);
       }
 
-      if (product.rotation_image_urls?.length) {
+      const previousRotationPaths = getProductRotationPaths(product);
+
+      if (previousRotationPaths.length) {
         await supabase.storage
           .from(PRODUCT_IMAGE_BUCKET)
-          .remove(product.rotation_image_urls);
+          .remove(previousRotationPaths);
       }
+
+      setProductRotationRows((currentRows) => {
+        const nextRows = { ...currentRows };
+        delete nextRows[String(product.id)];
+        return nextRows;
+      });
 
       await fetchProducts();
     } catch (error) {
-      if (newImagePaths.length) {
+      if (newImageRows.flat().length) {
         await supabase.storage
           .from(PRODUCT_IMAGE_BUCKET)
-          .remove(newImagePaths);
+          .remove(newImageRows.flat());
       }
 
       alert(
@@ -675,22 +883,43 @@ export default function AdminPage() {
           />
 
           <p className="mb-2 text-sm font-semibold text-amber-100">
-            360 photos
+            Multi-row 360 photos
           </p>
 
-          <input
-            type="file"
-            accept="image/*"
-            multiple
-            onChange={(e) =>
-              setRotationImages(Array.from(e.target.files || []))
-            }
-            className="mb-2 w-full text-sm file:mr-4 file:rounded-md file:border-0 file:bg-amber-200 file:px-4 file:py-2 file:font-bold file:text-black"
-          />
+          <div className="mb-2 grid gap-3 md:grid-cols-3">
+            {ROTATION_ROW_LABELS.map((label, rowIndex) => (
+              <label
+                key={label}
+                className="rounded-md border border-white/10 bg-black/25 p-3 text-sm"
+              >
+                <span className="mb-2 block font-semibold text-champagne/80">
+                  {label}
+                </span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={(e) =>
+                    updateNewProductRotationRow(
+                      rowIndex,
+                      Array.from(e.target.files || [])
+                    )
+                  }
+                  className="w-full text-xs file:mr-3 file:rounded-md file:border-0 file:bg-amber-200 file:px-3 file:py-2 file:font-bold file:text-black"
+                />
+                {rotationImageRows[rowIndex].length > 0 && (
+                  <span className="mt-2 block text-xs text-champagne/60">
+                    {rotationImageRows[rowIndex].length} photos selected
+                  </span>
+                )}
+              </label>
+            ))}
+          </div>
 
-          {rotationImages.length > 0 && (
+          {countRotationRowFiles(rotationImageRows) > 0 && (
             <p className="mb-6 text-sm text-champagne/70">
-              {rotationImages.length} photos selected
+              {countRotationRowFiles(rotationImageRows)} photos selected across{" "}
+              {rotationImageRows.filter((row) => row.length > 0).length} rows
             </p>
           )}
 
@@ -721,6 +950,15 @@ export default function AdminPage() {
               const rotationImageUrls = getProductImageUrls(
                 p.rotation_image_urls
               );
+              const rotationImageRows = getProductImageRows(
+                p.rotation_image_rows,
+                p.rotation_image_urls
+              );
+              const selectedRotationRows =
+                productRotationRows[String(p.id)] ||
+                createEmptyRotationImageRows();
+              const selectedRotationFileCount =
+                countRotationRowFiles(selectedRotationRows);
 
               return (
                 <div
@@ -732,6 +970,7 @@ export default function AdminPage() {
                     alt={p.name}
                     imageUrl={imageUrl}
                     frameUrls={rotationImageUrls}
+                    frameRows={rotationImageRows}
                     className="mb-4 h-56"
                   />
 
@@ -758,24 +997,56 @@ export default function AdminPage() {
                     <p className="mb-2 text-sm font-semibold text-amber-100">
                       {updatingProductId === p.id
                         ? "Updating 360 photos..."
-                        : `${rotationImageUrls.length} 360 photos`}
+                        : `${rotationImageRows.flat().length} photos in ${countRotationRows(
+                            p.rotation_image_rows
+                          ) || (rotationImageUrls.length ? 1 : 0)} rows`}
                     </p>
 
-                    <input
-                      type="file"
-                      accept="image/*"
-                      multiple
-                      disabled={Boolean(updatingProductId)}
-                      onChange={async (e) => {
-                        const input = e.currentTarget;
-                        await updateProductRotationImages(
-                          p,
-                          Array.from(input.files || [])
-                        );
-                        input.value = "";
-                      }}
-                      className="w-full text-sm disabled:opacity-60 file:mr-4 file:rounded-md file:border-0 file:bg-amber-200 file:px-4 file:py-2 file:font-bold file:text-black"
-                    />
+                    <div className="grid gap-3 md:grid-cols-3">
+                      {ROTATION_ROW_LABELS.map((label, rowIndex) => (
+                        <label
+                          key={`${p.id}-${label}`}
+                          className="rounded-md border border-white/10 bg-black/25 p-3 text-sm"
+                        >
+                          <span className="mb-2 block font-semibold text-champagne/80">
+                            {label}
+                          </span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            multiple
+                            disabled={Boolean(updatingProductId)}
+                            onChange={(e) =>
+                              updateExistingProductRotationRow(
+                                p.id,
+                                rowIndex,
+                                Array.from(e.target.files || [])
+                              )
+                            }
+                            className="w-full text-xs disabled:opacity-60 file:mr-3 file:rounded-md file:border-0 file:bg-amber-200 file:px-3 file:py-2 file:font-bold file:text-black"
+                          />
+                          {selectedRotationRows[rowIndex].length > 0 && (
+                            <span className="mt-2 block text-xs text-champagne/60">
+                              {selectedRotationRows[rowIndex].length} selected
+                            </span>
+                          )}
+                        </label>
+                      ))}
+                    </div>
+
+                    <button
+                      type="button"
+                      disabled={
+                        Boolean(updatingProductId) ||
+                        selectedRotationFileCount === 0
+                      }
+                      onClick={() =>
+                        updateProductRotationImages(p, selectedRotationRows)
+                      }
+                      className="mt-3 rounded-md border border-amber-200/45 px-4 py-2 text-sm font-bold text-amber-100 transition hover:border-amber-100 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      Replace 360 photos
+                    </button>
                   </div>
 
                 </div>
