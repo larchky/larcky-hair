@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Script from "next/script";
+import { CartProvider } from "@/app/components/CartProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -14,8 +15,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Lacky Hair",
-  description: "Luxury hair store",
+  title: "Dolapo Creator Tools",
+  description: "Content creation gear store",
 };
 
 export default function RootLayout({
@@ -31,7 +32,7 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col">
         <Script src="https://checkout.flutterwave.com/v3.js" />
 
-        {children}
+        <CartProvider>{children}</CartProvider>
       </body>
     </html>
   );

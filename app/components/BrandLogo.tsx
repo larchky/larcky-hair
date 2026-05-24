@@ -18,7 +18,7 @@ export default function BrandLogo({
         height={compact ? 48 : 64}
         unoptimized
         className={[
-          "shrink-0 rounded-full border border-amber-200/30 bg-black object-cover shadow-[0_0_32px_rgba(247,216,121,0.22)]",
+          "shrink-0 rounded-full border border-accent/35 bg-white object-cover shadow-[0_14px_34px_rgba(190,143,47,0.18)]",
           compact ? "h-12 w-12" : "h-16 w-16",
         ].join(" ")}
       />
@@ -32,7 +32,7 @@ export default function BrandLogo({
         >
           DOLAPO
         </p>
-        <p className="mt-1 text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-amber-200/80">
+        <p className="mt-1 text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-accent/80">
           Creator Tools
         </p>
       </div>

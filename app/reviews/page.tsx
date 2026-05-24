@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState, type ChangeEvent, type FormEvent } from "react";
 import { FiMessageSquare, FiStar } from "react-icons/fi";
 import BrandLogo from "@/app/components/BrandLogo";
+import CartLink from "@/app/components/CartLink";
 
 type Review = {
   id: number;
@@ -84,32 +85,33 @@ export default function ReviewsPage() {
   return (
     <main className="min-h-screen bg-studio px-5 py-8 text-champagne sm:px-8">
       <div className="mx-auto max-w-7xl">
-        <header className="flex flex-col justify-between gap-6 border-b border-white/10 pb-8 md:flex-row md:items-center">
+        <header className="flex flex-col justify-between gap-6 border-b border-[#eadbb8] pb-8 md:flex-row md:items-center">
           <BrandLogo compact />
 
           <div className="flex flex-wrap gap-3">
             <Link
               href="/"
-              className="w-fit rounded-md border border-amber-200/35 px-4 py-2 text-sm font-bold uppercase tracking-[0.14em] text-amber-100 transition hover:border-amber-100 hover:text-white"
+              className="w-fit rounded-md border border-accent/45 px-4 py-2 text-sm font-bold uppercase tracking-[0.14em] text-[#8c6518] transition hover:border-accent hover:text-primary"
             >
               Home
             </Link>
             <Link
               href="/products"
-              className="w-fit rounded-md border border-white/15 px-4 py-2 text-sm font-bold uppercase tracking-[0.14em] text-champagne transition hover:border-amber-200/60 hover:text-white"
+              className="w-fit rounded-md border border-[#d9c28c] px-4 py-2 text-sm font-bold uppercase tracking-[0.14em] text-champagne transition hover:border-accent/60 hover:text-primary"
             >
               Products
             </Link>
+            <CartLink />
           </div>
         </header>
 
         <section className="grid gap-8 py-10 lg:grid-cols-[0.92fr_1.08fr]">
           <div>
-            <p className="flex items-center gap-2 text-sm font-black uppercase tracking-[0.24em] text-amber-200">
+            <p className="flex items-center gap-2 text-sm font-black uppercase tracking-[0.24em] text-accent">
               <FiMessageSquare aria-hidden="true" />
               Customer Reviews
             </p>
-            <h1 className="mt-3 max-w-2xl font-serif text-5xl font-bold leading-tight text-white">
+            <h1 className="mt-3 max-w-2xl font-serif text-5xl font-bold leading-tight text-primary">
               What creators say after upgrading their setup.
             </h1>
             <p className="mt-5 max-w-xl text-base leading-8 text-champagne/70">
@@ -120,9 +122,9 @@ export default function ReviewsPage() {
 
           <form
             onSubmit={handleSubmit}
-            className="rounded-lg border border-amber-200/20 bg-white/[0.045] p-6 shadow-[0_30px_80px_rgba(0,0,0,0.32)]"
+            className="rounded-lg border border-accent/25 bg-white/90 p-6 shadow-[0_30px_80px_rgba(99,69,22,0.14)]"
           >
-            <h2 className="text-2xl font-bold text-white">Leave a review</h2>
+            <h2 className="text-2xl font-bold text-primary">Leave a review</h2>
 
             <div className="mt-5 grid gap-4 sm:grid-cols-2">
               <input
@@ -130,20 +132,20 @@ export default function ReviewsPage() {
                 placeholder="Your name"
                 value={form.name}
                 onChange={handleChange}
-                className="rounded-md border border-amber-200/30 bg-black/45 p-3 text-white outline-none transition placeholder:text-champagne/35 focus:border-amber-200"
+                className="rounded-md border border-accent/35 bg-white/90 p-3 text-primary outline-none transition placeholder:text-champagne/45 focus:border-accent"
               />
               <input
                 name="product"
                 placeholder="Product bought"
                 value={form.product}
                 onChange={handleChange}
-                className="rounded-md border border-amber-200/30 bg-black/45 p-3 text-white outline-none transition placeholder:text-champagne/35 focus:border-amber-200"
+                className="rounded-md border border-accent/35 bg-white/90 p-3 text-primary outline-none transition placeholder:text-champagne/45 focus:border-accent"
               />
               <select
                 name="rating"
                 value={form.rating}
                 onChange={handleChange}
-                className="rounded-md border border-amber-200/30 bg-black/45 p-3 text-white outline-none transition focus:border-amber-200 sm:col-span-2"
+                className="rounded-md border border-accent/35 bg-white/90 p-3 text-primary outline-none transition focus:border-accent sm:col-span-2"
               >
                 <option value="5">5/5</option>
                 <option value="4">4/5</option>
@@ -157,13 +159,13 @@ export default function ReviewsPage() {
                 value={form.comment}
                 onChange={handleChange}
                 rows={5}
-                className="resize-none rounded-md border border-amber-200/30 bg-black/45 p-3 text-white outline-none transition placeholder:text-champagne/35 focus:border-amber-200 sm:col-span-2"
+                className="resize-none rounded-md border border-accent/35 bg-white/90 p-3 text-primary outline-none transition placeholder:text-champagne/45 focus:border-accent sm:col-span-2"
               />
             </div>
 
             <button
               type="submit"
-              className="mt-5 w-full rounded-md bg-amber-200 px-4 py-3 font-black uppercase tracking-[0.14em] text-black transition hover:bg-white"
+              className="mt-5 w-full rounded-md bg-accent px-4 py-3 font-black uppercase tracking-[0.14em] text-primary transition hover:bg-[#ddb357]"
             >
               Submit Review
             </button>
@@ -174,16 +176,16 @@ export default function ReviewsPage() {
           {reviews.map((review) => (
             <article
               key={review.id}
-              className="border border-white/10 bg-white/[0.045] p-5 shadow-[0_20px_50px_rgba(0,0,0,0.24)]"
+              className="rounded-lg border border-[#eadbb8] bg-white/90 p-5 shadow-[0_18px_45px_rgba(99,69,22,0.10)]"
             >
               <div className="flex items-center justify-between gap-4">
-                <p className="font-bold text-white">{review.name}</p>
-                <span className="inline-flex items-center gap-1 rounded-md bg-amber-200/12 px-3 py-1 text-sm font-black text-amber-100">
+                <p className="font-bold text-primary">{review.name}</p>
+                <span className="inline-flex items-center gap-1 rounded-md bg-accent/12 px-3 py-1 text-sm font-black text-[#8c6518]">
                   <FiStar aria-hidden="true" />
                   {review.rating}/5
                 </span>
               </div>
-              <p className="mt-2 text-sm font-semibold text-amber-100">
+              <p className="mt-2 text-sm font-semibold text-[#8c6518]">
                 {review.product}
               </p>
               <p className="mt-4 leading-7 text-champagne/72">

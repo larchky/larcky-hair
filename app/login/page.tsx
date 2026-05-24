@@ -33,15 +33,15 @@ export default function LoginPage() {
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-studio px-5 py-10 text-champagne">
-      <div className="w-full max-w-md rounded-lg border border-amber-200/25 bg-white/[0.045] p-7 shadow-[0_30px_80px_rgba(0,0,0,0.55)]">
+      <div className="w-full max-w-md rounded-lg border border-accent/30 bg-white/90 p-7 shadow-[0_30px_80px_rgba(99,69,22,0.16)]">
         <BrandLogo />
 
         <div className="mt-8">
-          <p className="flex items-center gap-2 text-sm font-black uppercase tracking-[0.22em] text-amber-200">
+          <p className="flex items-center gap-2 text-sm font-black uppercase tracking-[0.22em] text-accent">
             <FiLock aria-hidden="true" />
             Admin Access
           </p>
-          <h1 className="mt-2 text-3xl font-bold text-white">
+          <h1 className="mt-2 text-3xl font-bold text-primary">
             Manage Dolapo stock
           </h1>
         </div>
@@ -51,7 +51,7 @@ export default function LoginPage() {
           placeholder="Email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="mt-6 w-full rounded-md border border-amber-200/30 bg-black/45 p-3 text-white outline-none transition placeholder:text-champagne/35 focus:border-amber-200"
+          className="mt-6 w-full rounded-md border border-accent/35 bg-white/90 p-3 text-primary outline-none transition placeholder:text-champagne/45 focus:border-accent"
         />
 
         <input
@@ -59,13 +59,13 @@ export default function LoginPage() {
           placeholder="Password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          className="mt-4 w-full rounded-md border border-amber-200/30 bg-black/45 p-3 text-white outline-none transition placeholder:text-champagne/35 focus:border-amber-200"
+          className="mt-4 w-full rounded-md border border-accent/35 bg-white/90 p-3 text-primary outline-none transition placeholder:text-champagne/45 focus:border-accent"
         />
 
         <button
           onClick={handleLogin}
           disabled={loading}
-          className="mt-6 w-full rounded-md bg-amber-200 px-4 py-3 font-black uppercase tracking-[0.14em] text-black transition hover:bg-white disabled:opacity-50"
+          className="mt-6 w-full rounded-md bg-accent px-4 py-3 font-black uppercase tracking-[0.14em] text-primary transition hover:bg-[#ddb357] disabled:opacity-50"
         >
           {loading ? "Logging in..." : "Login"}
         </button>

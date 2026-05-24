@@ -8,9 +8,16 @@ export type Product = {
   price: number;
   description: string | null;
   image_url: string | null;
+  stock_quantity?: number | null;
   rotation_image_urls?: string[] | null;
   rotation_image_rows?: string[][] | null;
 };
+
+export function getProductStock(product: Pick<Product, "stock_quantity">) {
+  const stock = Number(product.stock_quantity);
+
+  return Number.isFinite(stock) && stock > 0 ? Math.floor(stock) : 0;
+}
 
 export function getProductImageUrl(path?: string | null) {
   if (!path) return null;

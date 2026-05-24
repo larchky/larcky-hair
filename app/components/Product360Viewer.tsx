@@ -60,6 +60,8 @@ const TILT_KEY_STEP = 5;
 const PRELOAD_ROOT_MARGIN = "320px";
 const PRELOAD_BATCH_SIZE = 4;
 const PRELOAD_BATCH_DELAY_MS = 90;
+const ACTIVE_ROW_PRELOAD_DELAY_MS = 120;
+const ACTIVE_ROW_PRELOAD_LIMIT = 36;
 const NEARBY_FRAME_PRELOAD_OFFSETS = [0, 1, -1, 2, -2, 3, -3];
 
 const ZERO_TILT: TiltState = { x: 0, y: 0 };
@@ -139,6 +141,10 @@ function preloadNearbyFrames(row: string[], frameIndex: number) {
   );
 }
 
+function preloadFrameRow(row: string[]) {
+  return Promise.all(row.slice(0, ACTIVE_ROW_PRELOAD_LIMIT).map(preloadFrame));
+}
+
 export default function Product360Viewer({
   alt,
   imageUrl,
@@ -163,8 +169,11 @@ export default function Product360Viewer({
   const [zoom, setZoom] = useState(MIN_ZOOM);
   const [dragState, setDragState] = useState<DragState | null>(null);
   const viewerRef = useRef<HTMLDivElement | null>(null);
+  const dragStateRef = useRef<DragState | null>(null);
   const activePointers = useRef<Map<number, PointerPoint>>(new Map());
   const pinchState = useRef<PinchState | null>(null);
+  const pendingDragPoint = useRef<PointerPoint | null>(null);
+  const dragAnimationFrame = useRef<number | null>(null);
 
   const frameUrlsToPreload = useMemo(
     () => Array.from(new Set(rows.flat())),
@@ -268,8 +277,24 @@ export default function Product360Viewer({
   useEffect(() => {
     if (!canRotateFrames) return;
 
+    const timeoutId = window.setTimeout(() => {
+      void preloadFrameRow(activeRow);
+    }, ACTIVE_ROW_PRELOAD_DELAY_MS);
+
     void preloadNearbyFrames(activeRow, frameIndex);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
   }, [activeRow, canRotateFrames, frameIndex]);
+
+  useEffect(() => {
+    return () => {
+      if (dragAnimationFrame.current !== null) {
+        window.cancelAnimationFrame(dragAnimationFrame.current);
+      }
+    };
+  }, []);
 
   if (!activeFrame) return null;
 
@@ -287,8 +312,91 @@ export default function Product360Viewer({
     setTilt({ x: 0, y: 0 });
     setZoom(MIN_ZOOM);
     setDragState(null);
+    dragStateRef.current = null;
+    pendingDragPoint.current = null;
     activePointers.current.clear();
     pinchState.current = null;
+
+    if (dragAnimationFrame.current !== null) {
+      window.cancelAnimationFrame(dragAnimationFrame.current);
+      dragAnimationFrame.current = null;
+    }
+  };
+
+  const updateDragView = (point: PointerPoint) => {
+    const currentDragState = dragStateRef.current;
+
+    if (!currentDragState) return;
+
+    const horizontalDelta = point.x - currentDragState.startX;
+    const verticalDelta = point.y - currentDragState.startY;
+
+    if (canRotateFrames && Math.abs(horizontalDelta) >= 8) {
+      const draggedFrames = Math.round(
+        horizontalDelta /
+          getFrameDragDistance(viewerRef.current, activeRow.length)
+      );
+      const nextFrameIndex = wrapIndex(
+        currentDragState.baseFrameIndex + draggedFrames,
+        activeRow.length
+      );
+
+      setFrameIndex((current) =>
+        current === nextFrameIndex ? current : nextFrameIndex
+      );
+    }
+
+    if (canRotateRows && Math.abs(verticalDelta) >= 8) {
+      const draggedRows = Math.round(-verticalDelta / ROW_DRAG_DISTANCE);
+      const nextRowIndex = clamp(
+        currentDragState.baseRowIndex + draggedRows,
+        0,
+        rows.length - 1
+      );
+
+      setRowIndex((current) =>
+        current === nextRowIndex ? current : nextRowIndex
+      );
+      return;
+    }
+
+    if (!canTilt) return;
+
+    setTilt((current) => {
+      const nextTilt = {
+        x: clamp(
+          currentDragState.baseTiltX - verticalDelta / TILT_DRAG_DISTANCE,
+          -MAX_TILT,
+          MAX_TILT
+        ),
+        y: clamp(
+          currentDragState.baseTiltY + horizontalDelta / TILT_DRAG_DISTANCE,
+          -MAX_TILT,
+          MAX_TILT
+        ),
+      };
+
+      return current.x === nextTilt.x && current.y === nextTilt.y
+        ? current
+        : nextTilt;
+    });
+  };
+
+  const scheduleDragUpdate = (point: PointerPoint) => {
+    pendingDragPoint.current = point;
+
+    if (dragAnimationFrame.current !== null) return;
+
+    dragAnimationFrame.current = window.requestAnimationFrame(() => {
+      dragAnimationFrame.current = null;
+
+      const nextPoint = pendingDragPoint.current;
+      pendingDragPoint.current = null;
+
+      if (nextPoint) {
+        updateDragView(nextPoint);
+      }
+    });
   };
 
   const handlePointerDown = (event: PointerEvent<HTMLDivElement>) => {
@@ -296,6 +404,7 @@ export default function Product360Viewer({
 
     if (canRotateFrames) {
       void preloadNearbyFrames(activeRow, frameIndex);
+      void preloadFrameRow(activeRow);
     }
 
     activePointers.current.set(event.pointerId, {
@@ -319,14 +428,17 @@ export default function Product360Viewer({
       return;
     }
 
-    setDragState({
+    const nextDragState = {
       baseFrameIndex: frameIndex,
       baseRowIndex: safeRowIndex,
       baseTiltX: tilt.x,
       baseTiltY: tilt.y,
       startX: event.clientX,
       startY: event.clientY,
-    });
+    };
+
+    dragStateRef.current = nextDragState;
+    setDragState(nextDragState);
   };
 
   const handlePointerMove = (event: PointerEvent<HTMLDivElement>) => {
@@ -360,59 +472,11 @@ export default function Product360Viewer({
       return;
     }
 
-    if (!dragState) return;
+    if (!dragStateRef.current) return;
 
-    const horizontalDelta = event.clientX - dragState.startX;
-    const verticalDelta = event.clientY - dragState.startY;
-
-    if (canRotateFrames && Math.abs(horizontalDelta) >= 8) {
-      const draggedFrames = Math.round(
-        horizontalDelta /
-          getFrameDragDistance(viewerRef.current, activeRow.length)
-      );
-      const nextFrameIndex = wrapIndex(
-        dragState.baseFrameIndex + draggedFrames,
-        activeRow.length
-      );
-
-      setFrameIndex((current) =>
-        current === nextFrameIndex ? current : nextFrameIndex
-      );
-    }
-
-    if (canRotateRows && Math.abs(verticalDelta) >= 8) {
-      const draggedRows = Math.round(-verticalDelta / ROW_DRAG_DISTANCE);
-      const nextRowIndex = clamp(
-        dragState.baseRowIndex + draggedRows,
-        0,
-        rows.length - 1
-      );
-
-      setRowIndex((current) =>
-        current === nextRowIndex ? current : nextRowIndex
-      );
-      return;
-    }
-
-    if (!canTilt) return;
-
-    setTilt((current) => {
-      const nextTilt = {
-        x: clamp(
-          dragState.baseTiltX - verticalDelta / TILT_DRAG_DISTANCE,
-          -MAX_TILT,
-          MAX_TILT
-        ),
-        y: clamp(
-          dragState.baseTiltY + horizontalDelta / TILT_DRAG_DISTANCE,
-          -MAX_TILT,
-          MAX_TILT
-        ),
-      };
-
-      return current.x === nextTilt.x && current.y === nextTilt.y
-        ? current
-        : nextTilt;
+    scheduleDragUpdate({
+      x: event.clientX,
+      y: event.clientY,
     });
   };
 
@@ -420,6 +484,13 @@ export default function Product360Viewer({
     activePointers.current.delete(event.pointerId);
     pinchState.current = null;
     setDragState(null);
+    dragStateRef.current = null;
+    pendingDragPoint.current = null;
+
+    if (dragAnimationFrame.current !== null) {
+      window.cancelAnimationFrame(dragAnimationFrame.current);
+      dragAnimationFrame.current = null;
+    }
 
     if (event.currentTarget.hasPointerCapture(event.pointerId)) {
       event.currentTarget.releasePointerCapture(event.pointerId);
@@ -532,7 +603,7 @@ export default function Product360Viewer({
       onWheel={handleWheel}
       onDoubleClick={handleDoubleClick}
       className={[
-        "relative h-40 w-full select-none overflow-hidden rounded-md border border-white/10 bg-zinc-950 outline-none ring-amber-200 focus-visible:ring-2",
+        "relative h-40 w-full select-none overflow-hidden rounded-md border border-[#eadbb8] bg-[#fff8ea] outline-none ring-accent focus-visible:ring-2",
         isDragInteractive ? "cursor-grab active:cursor-grabbing" : "",
         className,
       ].join(" ")}
@@ -568,7 +639,7 @@ export default function Product360Viewer({
             event.stopPropagation();
             adjustZoom(-ZOOM_STEP);
           }}
-          className="grid size-9 place-items-center rounded-md border border-white/15 bg-black/70 text-amber-100 shadow-[0_10px_24px_rgba(0,0,0,0.24)] transition hover:border-amber-200 hover:text-white disabled:cursor-not-allowed disabled:opacity-45"
+          className="grid size-9 place-items-center rounded-md border border-[#d9c28c] bg-white/95 text-[#8c6518] shadow-[0_10px_24px_rgba(99,69,22,0.14)] transition hover:border-accent hover:text-primary disabled:cursor-not-allowed disabled:opacity-45"
         >
           <FiZoomOut aria-hidden="true" />
         </button>
@@ -582,7 +653,7 @@ export default function Product360Viewer({
             event.stopPropagation();
             resetView();
           }}
-          className="grid size-9 place-items-center rounded-md border border-white/15 bg-black/70 text-amber-100 shadow-[0_10px_24px_rgba(0,0,0,0.24)] transition hover:border-amber-200 hover:text-white"
+          className="grid size-9 place-items-center rounded-md border border-[#d9c28c] bg-white/95 text-[#8c6518] shadow-[0_10px_24px_rgba(99,69,22,0.14)] transition hover:border-accent hover:text-primary"
         >
           <FiRotateCcw aria-hidden="true" />
         </button>
@@ -597,7 +668,7 @@ export default function Product360Viewer({
             event.stopPropagation();
             adjustZoom(ZOOM_STEP);
           }}
-          className="grid size-9 place-items-center rounded-md border border-white/15 bg-black/70 text-amber-100 shadow-[0_10px_24px_rgba(0,0,0,0.24)] transition hover:border-amber-200 hover:text-white disabled:cursor-not-allowed disabled:opacity-45"
+          className="grid size-9 place-items-center rounded-md border border-[#d9c28c] bg-white/95 text-[#8c6518] shadow-[0_10px_24px_rgba(99,69,22,0.14)] transition hover:border-accent hover:text-primary disabled:cursor-not-allowed disabled:opacity-45"
         >
           <FiZoomIn aria-hidden="true" />
         </button>

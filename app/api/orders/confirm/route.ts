@@ -15,7 +15,7 @@ type ConfirmOrderBody = {
 };
 
 function redirectToProducts(request: Request, payment: string) {
-  const redirectUrl = new URL("/products", request.url);
+  const redirectUrl = new URL("/cart", request.url);
   redirectUrl.searchParams.set("payment", payment);
 
   return Response.redirect(redirectUrl, 303);

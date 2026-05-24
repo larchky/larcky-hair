@@ -9,9 +9,19 @@ import {
 } from "react";
 import { FiCreditCard, FiX } from "react-icons/fi";
 
+type CheckoutItem = {
+  name: string;
+  price: number;
+  quantity: number;
+};
+
 type Props = {
   amount: number;
   productName: string;
+  buttonLabel?: string;
+  checkoutItems?: CheckoutItem[];
+  disabled?: boolean;
+  onPaymentSuccess?: () => void;
 };
 
 type CheckoutForm = {
@@ -36,7 +46,22 @@ const emptyForm: CheckoutForm = {
   deliveryAddress: "",
 };
 
-function PayButton({ amount, productName }: Props) {
+function formatCurrency(value: number) {
+  return new Intl.NumberFormat("en-NG", {
+    currency: "NGN",
+    maximumFractionDigits: 0,
+    style: "currency",
+  }).format(value);
+}
+
+function PayButton({
+  amount,
+  productName,
+  buttonLabel = "Proceed to Payment",
+  checkoutItems = [],
+  disabled = false,
+  onPaymentSuccess,
+}: Props) {
   const [form, setForm] = useState(emptyForm);
   const [isOpen, setIsOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -76,23 +101,36 @@ function PayButton({ amount, productName }: Props) {
     };
   }, [isOpen]);
 
+  const safeAmount = Number.isFinite(Number(amount)) ? Number(amount) : 0;
   const customerName = form.name.trim();
   const customerPhone = form.phone.trim();
   const customerEmail = form.email.trim();
   const deliveryAddress = form.deliveryAddress.trim();
   const paymentEmail = customerEmail || DEFAULT_PAYMENT_EMAIL;
+  const hasCheckoutItems = checkoutItems.length > 0;
+  const itemCount = checkoutItems.reduce(
+    (total, item) => total + item.quantity,
+    0
+  );
+  const orderItemsSummary = hasCheckoutItems
+    ? checkoutItems
+        .map((item) => `${item.name} x${item.quantity}`)
+        .join(" | ")
+    : productName;
   const paymentLogo =
     typeof window !== "undefined" ? `${window.location.origin}/api/logo` : "";
   const config = {
     public_key: process.env.NEXT_PUBLIC_FLUTTERWAVE_PUBLIC_KEY!,
     tx_ref: txRef,
-    amount,
+    amount: safeAmount,
     currency: "NGN",
     payment_options: "card,banktransfer,ussd",
     meta: {
-      order_source: "dolapo_checkout",
+      order_source: "dolapo_cart_checkout",
       product_name: productName,
-      order_amount: amount,
+      order_items: orderItemsSummary,
+      item_count: itemCount || 1,
+      order_amount: safeAmount,
       customer_name: customerName,
       customer_phone: customerPhone,
       customer_email: customerEmail || UNPROVIDED_EMAIL,
@@ -131,6 +169,8 @@ function PayButton({ amount, productName }: Props) {
   };
 
   const openCheckout = () => {
+    if (disabled || safeAmount <= 0) return;
+
     setTxRef(`DOLAPO-${Date.now()}-${Math.floor(Math.random() * 100000)}`);
     setIsOpen(true);
   };
@@ -152,7 +192,7 @@ function PayButton({ amount, productName }: Props) {
         txRef: paymentResponse.tx_ref || txRef,
         order: {
           productName,
-          amount,
+          amount: safeAmount,
           customerName,
           customerPhone,
           customerEmail: customerEmail || UNPROVIDED_EMAIL,
@@ -191,6 +231,7 @@ function PayButton({ amount, productName }: Props) {
         try {
           await confirmPaidOrder(response);
           alert("Payment successful! Your order has been received.");
+          onPaymentSuccess?.();
           resetCheckout();
         } catch (error) {
           alert(
@@ -214,24 +255,25 @@ function PayButton({ amount, productName }: Props) {
       <button
         type="button"
         onClick={openCheckout}
-        className="inline-flex items-center justify-center gap-2 rounded-md bg-amber-200 px-4 py-2 text-sm font-black uppercase tracking-[0.12em] text-black transition hover:bg-white"
+        disabled={disabled || safeAmount <= 0}
+        className="inline-flex items-center justify-center gap-2 rounded-md bg-accent px-4 py-3 text-sm font-black uppercase tracking-[0.12em] text-primary transition hover:bg-[#ddb357] disabled:cursor-not-allowed disabled:opacity-55"
       >
         <FiCreditCard aria-hidden="true" />
-        Pay Now
+        {buttonLabel}
       </button>
 
       {isOpen && (
-        <div className="fixed inset-0 z-50 bg-black/90 px-4">
+        <div className="fixed inset-0 z-50 bg-primary/70 px-4">
           <form
             onSubmit={handleSubmit}
-            className="fixed left-1/2 top-1/2 max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-lg border border-amber-200/25 bg-[#11100e] p-6 text-champagne shadow-[0_18px_42px_rgba(0,0,0,0.48)]"
+            className="fixed left-1/2 top-1/2 max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-lg border border-accent/30 bg-[#fffaf0] p-6 text-champagne shadow-[0_18px_42px_rgba(99,69,22,0.16)]"
           >
             <div className="mb-5 flex items-center justify-between gap-4">
               <div>
-                <p className="text-xs font-black uppercase tracking-[0.2em] text-amber-200">
+                <p className="text-xs font-black uppercase tracking-[0.2em] text-accent">
                   Checkout
                 </p>
-                <h2 className="mt-1 text-xl font-bold text-white">
+                <h2 className="mt-1 text-xl font-bold text-primary">
                   Delivery Details
                 </h2>
               </div>
@@ -245,11 +287,40 @@ function PayButton({ amount, productName }: Props) {
                 }}
                 disabled={isSubmitting}
                 aria-label="Close checkout"
-                className="rounded-md border border-white/10 bg-white/[0.04] p-2 text-amber-100 transition hover:border-amber-200/50 disabled:opacity-50"
+                className="rounded-md border border-[#eadbb8] bg-white/85 p-2 text-[#8c6518] transition hover:border-accent/50 disabled:opacity-50"
               >
                 <FiX aria-hidden="true" />
               </button>
             </div>
+
+            {hasCheckoutItems && (
+              <div className="mb-5 rounded-md border border-[#eadbb8] bg-white/80 p-4">
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <p className="text-sm font-black uppercase tracking-[0.14em] text-accent">
+                    Cart Summary
+                  </p>
+                  <p className="font-black text-primary">
+                    {formatCurrency(safeAmount)}
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  {checkoutItems.map((item) => (
+                    <div
+                      key={item.name}
+                      className="flex items-center justify-between gap-3 text-sm"
+                    >
+                      <span className="text-champagne/80">
+                        {item.name} x{item.quantity}
+                      </span>
+                      <span className="font-semibold text-primary">
+                        {formatCurrency(item.price * item.quantity)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <input
               name="name"
@@ -257,7 +328,7 @@ function PayButton({ amount, productName }: Props) {
               value={form.name}
               onChange={handleChange}
               required
-              className="mb-4 w-full rounded-md border border-amber-200/30 bg-black/50 p-3 text-white outline-none transition placeholder:text-champagne/35 focus:border-amber-200"
+              className="mb-4 w-full rounded-md border border-accent/35 bg-white/90 p-3 text-primary outline-none transition placeholder:text-champagne/45 focus:border-accent"
             />
 
             <input
@@ -266,7 +337,7 @@ function PayButton({ amount, productName }: Props) {
               value={form.phone}
               onChange={handleChange}
               required
-              className="mb-4 w-full rounded-md border border-amber-200/30 bg-black/50 p-3 text-white outline-none transition placeholder:text-champagne/35 focus:border-amber-200"
+              className="mb-4 w-full rounded-md border border-accent/35 bg-white/90 p-3 text-primary outline-none transition placeholder:text-champagne/45 focus:border-accent"
             />
 
             <input
@@ -275,7 +346,7 @@ function PayButton({ amount, productName }: Props) {
               placeholder="Email (optional)"
               value={form.email}
               onChange={handleChange}
-              className="mb-4 w-full rounded-md border border-amber-200/30 bg-black/50 p-3 text-white outline-none transition placeholder:text-champagne/35 focus:border-amber-200"
+              className="mb-4 w-full rounded-md border border-accent/35 bg-white/90 p-3 text-primary outline-none transition placeholder:text-champagne/45 focus:border-accent"
             />
 
             <textarea
@@ -285,10 +356,10 @@ function PayButton({ amount, productName }: Props) {
               onChange={handleChange}
               required
               rows={4}
-              className="mb-5 w-full resize-none rounded-md border border-amber-200/30 bg-black/50 p-3 text-white outline-none transition placeholder:text-champagne/35 focus:border-amber-200"
+              className="mb-5 w-full resize-none rounded-md border border-accent/35 bg-white/90 p-3 text-primary outline-none transition placeholder:text-champagne/45 focus:border-accent"
             />
 
-            <div className="mb-5 rounded-md border border-amber-200/25 bg-amber-200/10 p-4 text-sm leading-6 text-amber-50">
+            <div className="mb-5 rounded-md border border-accent/30 bg-accent/10 p-4 text-sm leading-6 text-[#5c4214]">
               Payment does not include delivery. You will be contacted by
               Dolapo Store to make arrangements for delivery.
             </div>
@@ -296,7 +367,7 @@ function PayButton({ amount, productName }: Props) {
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full rounded-md bg-amber-200 px-4 py-3 font-black uppercase tracking-[0.14em] text-black transition hover:bg-white disabled:opacity-60"
+              className="w-full rounded-md bg-accent px-4 py-3 font-black uppercase tracking-[0.14em] text-primary transition hover:bg-[#ddb357] disabled:opacity-60"
             >
               {isSubmitting ? "Opening payment..." : "Proceed to Payment"}
             </button>

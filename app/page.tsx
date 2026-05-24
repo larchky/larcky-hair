@@ -16,10 +16,12 @@ import {
   getProductImageUrl,
   getProductImageRows,
   getProductImageUrls,
+  getProductStock,
   type Product,
 } from "@/lib/productImages";
+import AddToCartButton from "@/app/components/AddToCartButton";
 import BrandLogo from "@/app/components/BrandLogo";
-import PayButton from "@/app/components/PayButton";
+import CartLink from "@/app/components/CartLink";
 import Product360Viewer from "@/app/components/Product360Viewer";
 
 const categories = [
@@ -72,33 +74,36 @@ export default function Home() {
 
   return (
     <main className="min-h-screen overflow-hidden bg-studio text-champagne">
-      <header className="mx-auto flex w-full max-w-7xl items-center justify-between px-5 py-5 sm:px-8">
+      <header className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-5 py-5 sm:px-8">
         <BrandLogo compact />
 
-        <nav className="hidden items-center gap-6 text-sm font-semibold text-champagne/75 md:flex">
-          <a className="transition hover:text-amber-200" href="#catalog">
-            Shop
-          </a>
-          <Link className="transition hover:text-amber-200" href="/products">
-            Products
-          </Link>
-          <Link className="transition hover:text-amber-200" href="/reviews">
-            Reviews
-          </Link>
-          <Link className="transition hover:text-amber-200" href="/login">
-            Admin
-          </Link>
-        </nav>
+        <div className="flex items-center gap-3">
+          <nav className="hidden items-center gap-6 text-sm font-semibold text-champagne/75 md:flex">
+            <a className="transition hover:text-accent" href="#catalog">
+              Shop
+            </a>
+            <Link className="transition hover:text-accent" href="/products">
+              Products
+            </Link>
+            <Link className="transition hover:text-accent" href="/reviews">
+              Reviews
+            </Link>
+            <Link className="transition hover:text-accent" href="/login">
+              Admin
+            </Link>
+          </nav>
+          <CartLink />
+        </div>
       </header>
 
       <section className="relative mx-auto grid w-full max-w-7xl gap-10 px-5 pb-12 pt-8 sm:px-8 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
         <div className="relative z-10">
-          <p className="mb-4 inline-flex items-center gap-2 rounded-md border border-amber-200/25 bg-white/5 px-3 py-2 text-xs font-bold uppercase tracking-[0.24em] text-amber-200">
+          <p className="mb-4 inline-flex items-center gap-2 rounded-md border border-accent/30 bg-white/80 px-3 py-2 text-xs font-bold uppercase tracking-[0.24em] text-accent">
             <FiCamera aria-hidden="true" />
             Tools to create
           </p>
 
-          <h1 className="max-w-3xl font-serif text-4xl font-bold leading-[1.02] text-white sm:text-5xl lg:text-6xl">
+          <h1 className="max-w-3xl font-serif text-4xl font-bold leading-[1.02] text-primary sm:text-5xl lg:text-6xl">
             Creator gear with a premium studio finish.
           </h1>
 
@@ -111,19 +116,19 @@ export default function Home() {
           <div className="mt-8 flex flex-wrap gap-3">
             <a
               href="#catalog"
-              className="rounded-md bg-amber-200 px-6 py-3 text-sm font-black uppercase tracking-[0.16em] text-black shadow-[0_16px_34px_rgba(247,216,121,0.22)] transition hover:bg-white"
+              className="rounded-md bg-accent px-6 py-3 text-sm font-black uppercase tracking-[0.16em] text-primary shadow-[0_16px_34px_rgba(190,143,47,0.22)] transition hover:bg-[#ddb357]"
             >
               Shop Gear
             </a>
             <Link
               href="/products"
-              className="rounded-md border border-white/18 px-6 py-3 text-sm font-bold uppercase tracking-[0.16em] text-champagne transition hover:border-amber-200 hover:text-amber-100"
+              className="rounded-md border border-[#d9c28c] px-6 py-3 text-sm font-bold uppercase tracking-[0.16em] text-champagne transition hover:border-accent hover:text-[#8c6518]"
             >
               View Catalog
             </Link>
             <Link
               href="/reviews"
-              className="rounded-md border border-white/18 px-6 py-3 text-sm font-bold uppercase tracking-[0.16em] text-champagne transition hover:border-amber-200 hover:text-amber-100"
+              className="rounded-md border border-[#d9c28c] px-6 py-3 text-sm font-bold uppercase tracking-[0.16em] text-champagne transition hover:border-accent hover:text-[#8c6518]"
             >
               Reviews
             </Link>
@@ -136,9 +141,9 @@ export default function Home() {
               return (
                 <div
                   key={item.label}
-                  className="flex items-center gap-3 border-l border-amber-200/30 bg-white/[0.03] px-4 py-3"
+                  className="flex items-center gap-3 border-l border-accent/35 bg-white/75 px-4 py-3"
                 >
-                  <Icon className="text-amber-200" aria-hidden="true" />
+                  <Icon className="text-accent" aria-hidden="true" />
                   <span className="text-sm font-semibold text-champagne/82">
                     {item.label}
                   </span>
@@ -160,19 +165,19 @@ export default function Home() {
             className="pointer-events-none mx-auto w-full max-w-[28rem] select-none opacity-[0.16] grayscale"
           />
 
-          <div className="absolute bottom-4 left-1/2 flex w-[min(92%,25rem)] -translate-x-1/2 items-center justify-between rounded-md border border-amber-200/30 bg-black/85 px-4 py-3 text-sm shadow-[0_18px_34px_rgba(0,0,0,0.42)]">
-            <span className="font-semibold text-amber-100">Ready-made kits</span>
+          <div className="absolute bottom-4 left-1/2 flex w-[min(92%,25rem)] -translate-x-1/2 items-center justify-between rounded-md border border-accent/35 bg-white/95 px-4 py-3 text-sm shadow-[0_18px_34px_rgba(99,69,22,0.14)]">
+            <span className="font-semibold text-[#8c6518]">Ready-made kits</span>
             <span className="text-champagne/70">shoot, stream, record</span>
           </div>
         </div>
       </section>
 
-      <section className="border-y border-white/10 bg-black/28 px-5 py-5 sm:px-8">
+      <section className="border-y border-[#eadbb8] bg-[#fff3dc] px-5 py-5 sm:px-8">
         <div className="mx-auto flex max-w-7xl flex-wrap gap-3">
           {categories.map((category) => (
             <span
               key={category}
-              className="rounded-md border border-white/12 bg-white/[0.04] px-4 py-2 text-sm font-semibold text-champagne/78"
+              className="rounded-md border border-[#eadbb8] bg-white/85 px-4 py-2 text-sm font-semibold text-champagne/78"
             >
               {category}
             </span>
@@ -183,10 +188,10 @@ export default function Home() {
       <section id="catalog" className="mx-auto max-w-7xl px-5 py-14 sm:px-8">
         <div className="mb-8 flex flex-col justify-between gap-4 md:flex-row md:items-end">
           <div>
-            <p className="text-sm font-black uppercase tracking-[0.28em] text-amber-200">
+            <p className="text-sm font-black uppercase tracking-[0.28em] text-accent">
               Featured Stock
             </p>
-            <h2 className="mt-2 font-serif text-4xl font-bold text-white">
+            <h2 className="mt-2 font-serif text-4xl font-bold text-primary">
               Creator tools for every setup
             </h2>
           </div>
@@ -196,21 +201,21 @@ export default function Home() {
           </p>
         </div>
 
-        <label className="mb-8 flex max-w-xl items-center gap-3 rounded-md border border-amber-200/25 bg-black/35 px-4 py-3 text-champagne shadow-[0_18px_48px_rgba(0,0,0,0.22)]">
-          <FiSearch className="shrink-0 text-amber-200" aria-hidden="true" />
+        <label className="mb-8 flex max-w-xl items-center gap-3 rounded-md border border-accent/30 bg-white/90 px-4 py-3 text-champagne shadow-[0_18px_48px_rgba(99,69,22,0.12)]">
+          <FiSearch className="shrink-0 text-accent" aria-hidden="true" />
           <input
             type="search"
             value={searchTerm}
             onChange={(event) => setSearchTerm(event.target.value)}
             placeholder="Search cameras, microphones, lights..."
-            className="w-full bg-transparent text-sm text-white outline-none placeholder:text-champagne/38"
+            className="w-full bg-transparent text-sm text-primary outline-none placeholder:text-champagne/45"
           />
         </label>
 
         {products.length === 0 ? (
-          <div className="border border-amber-200/20 bg-white/[0.04] p-8 text-center">
-            <FiMic className="mx-auto text-4xl text-amber-200" aria-hidden="true" />
-            <h3 className="mt-4 text-2xl font-bold text-white">
+          <div className="rounded-lg border border-accent/25 bg-white/85 p-8 text-center">
+            <FiMic className="mx-auto text-4xl text-accent" aria-hidden="true" />
+            <h3 className="mt-4 text-2xl font-bold text-primary">
               No creator tools listed yet
             </h3>
             <p className="mx-auto mt-2 max-w-md text-champagne/65">
@@ -219,8 +224,8 @@ export default function Home() {
             </p>
           </div>
         ) : featuredProducts.length === 0 ? (
-          <div className="border border-amber-200/20 bg-white/[0.04] p-8 text-center">
-            <h3 className="text-2xl font-bold text-white">
+          <div className="rounded-lg border border-accent/25 bg-white/85 p-8 text-center">
+            <h3 className="text-2xl font-bold text-primary">
               No matching products
             </h3>
             <p className="mx-auto mt-2 max-w-md text-champagne/65">
@@ -239,11 +244,12 @@ export default function Home() {
                 p.rotation_image_rows,
                 p.rotation_image_urls
               );
+              const stockQuantity = getProductStock(p);
 
               return (
                 <article
                   key={p.id}
-                  className="group border border-white/10 bg-white/[0.045] p-4 shadow-[0_20px_50px_rgba(0,0,0,0.28)] transition hover:-translate-y-1 hover:border-amber-200/45"
+                  className="group rounded-lg border border-[#eadbb8] bg-white/90 p-4 shadow-[0_18px_45px_rgba(99,69,22,0.12)] transition hover:-translate-y-1 hover:border-accent/55"
                 >
                   <Product360Viewer
                     alt={p.name}
@@ -254,15 +260,27 @@ export default function Home() {
                   />
 
                   <div className="mt-5">
-                    <h3 className="text-xl font-bold text-white">{p.name}</h3>
+                    <h3 className="text-xl font-bold text-primary">{p.name}</h3>
+                    <p
+                      className={[
+                        "mt-2 inline-flex rounded-md px-3 py-1 text-xs font-black uppercase tracking-[0.14em]",
+                        stockQuantity > 0
+                          ? "bg-emerald-100 text-emerald-800"
+                          : "bg-red-50 text-red-700",
+                      ].join(" ")}
+                    >
+                      {stockQuantity > 0
+                        ? `${stockQuantity} in stock`
+                        : "Out of stock"}
+                    </p>
                     <p className="mt-2 min-h-12 text-sm leading-6 text-champagne/68">
                       {p.description || "Premium creator tool for studio work."}
                     </p>
                     <div className="mt-5 flex items-center justify-between gap-3">
-                      <p className="text-2xl font-black text-amber-200">
+                      <p className="text-2xl font-black text-accent">
                         NGN {p.price}
                       </p>
-                      <PayButton amount={Number(p.price)} productName={p.name} />
+                      <AddToCartButton product={p} imageUrl={imageUrl} />
                     </div>
                   </div>
                 </article>
@@ -274,7 +292,7 @@ export default function Home() {
             <div className="mt-8 text-center">
               <Link
                 href="/products"
-                className="inline-flex rounded-md border border-amber-200/35 px-5 py-3 text-sm font-bold uppercase tracking-[0.14em] text-amber-100 transition hover:border-amber-100 hover:text-white"
+                className="inline-flex rounded-md border border-accent/45 px-5 py-3 text-sm font-bold uppercase tracking-[0.14em] text-[#8c6518] transition hover:border-accent hover:text-primary"
               >
                 View All Products
               </Link>
@@ -284,7 +302,7 @@ export default function Home() {
         )}
       </section>
 
-      <footer className="border-t border-white/10 px-5 py-8 text-center text-sm text-champagne/55 sm:px-8">
+      <footer className="border-t border-[#eadbb8] px-5 py-8 text-center text-sm text-champagne/55 sm:px-8">
         Copyright 2026 Dolapo. Tools to create. Content that connects.
       </footer>
     </main>

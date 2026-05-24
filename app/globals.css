@@ -3,16 +3,14 @@
 @tailwind utilities;
 
 body {
-  background:
-    radial-gradient(circle at top left, rgba(247, 216, 121, 0.12), transparent 34rem),
-    linear-gradient(135deg, #0b0a08 0%, #11100e 52%, #050504 100%);
-  color: #fff8e7;
+  background: linear-gradient(180deg, #fffdf8 0%, #fff8ec 46%, #f8efd9 100%);
+  color: #3d2d16;
   scrollbar-gutter: stable;
 }
 
 ::selection {
-  background: #f7d879;
-  color: #080706;
+  background: #c99225;
+  color: #fffaf0;
 }
 
 input,

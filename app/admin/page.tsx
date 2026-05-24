@@ -16,6 +16,7 @@ import {
   getProductImageUrl,
   getProductImageRows,
   getProductImageUrls,
+  getProductStock,
   PRODUCT_IMAGE_BUCKET,
   type Product,
 } from "@/lib/productImages";
@@ -213,6 +214,7 @@ export default function AdminPage() {
   const [form, setForm] = useState({
     name: "",
     price: "",
+    stockQuantity: "",
     description: "",
   });
 
@@ -234,8 +236,16 @@ export default function AdminPage() {
     null
   );
 
+  const [updatingStockProductId, setUpdatingStockProductId] = useState<
+    Product["id"] | null
+  >(null);
+
   const [productRotationRows, setProductRotationRows] = useState<
     Record<string, File[][]>
+  >({});
+
+  const [productStockForms, setProductStockForms] = useState<
+    Record<string, string>
   >({});
 
   const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
@@ -553,14 +563,70 @@ export default function AdminPage() {
     });
   };
 
+  const updateProductStock = async (product: Product) => {
+    if (updatingStockProductId) return;
+
+    const productKey = String(product.id);
+    const stockQuantity = Number(
+      productStockForms[productKey] ?? getProductStock(product)
+    );
+
+    if (!Number.isInteger(stockQuantity) || stockQuantity < 0) {
+      alert("Please enter a whole number for items in stock.");
+      return;
+    }
+
+    setUpdatingStockProductId(product.id);
+
+    try {
+      const { error } = await supabase
+        .from("products")
+        .update({
+          stock_quantity: stockQuantity,
+        })
+        .eq("id", product.id);
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      setProductStockForms((currentForms) => {
+        const nextForms = { ...currentForms };
+        delete nextForms[productKey];
+        return nextForms;
+      });
+
+      await fetchProducts();
+    } catch (error) {
+      alert(
+        error instanceof Error ? error.message : "Could not update stock."
+      );
+    } finally {
+      setUpdatingStockProductId(null);
+    }
+  };
+
   // -----------------------------------
   // ADD PRODUCT
   // -----------------------------------
   const handleSubmit = async () => {
     if (saving) return;
 
-    if (!form.name.trim() || !form.price.trim()) {
-      alert("Please enter product name and price.");
+    if (!form.name.trim() || !form.price.trim() || !form.stockQuantity.trim()) {
+      alert("Please enter product name, price, and stock quantity.");
+      return;
+    }
+
+    const price = Number(form.price);
+    const stockQuantity = Number(form.stockQuantity);
+
+    if (!Number.isFinite(price) || price <= 0) {
+      alert("Please enter a valid product price.");
+      return;
+    }
+
+    if (!Number.isInteger(stockQuantity) || stockQuantity < 0) {
+      alert("Please enter a whole number for items in stock.");
       return;
     }
 
@@ -578,7 +644,8 @@ export default function AdminPage() {
         .insert([
           {
             name: form.name.trim(),
-            price: Number(form.price),
+            price,
+            stock_quantity: stockQuantity,
             description: form.description.trim(),
             image_url: imagePath,
             rotation_image_urls: rotationImageRowsPaths.flat(),
@@ -595,6 +662,7 @@ export default function AdminPage() {
       setForm({
         name: "",
         price: "",
+        stockQuantity: "",
         description: "",
       });
 
@@ -822,14 +890,14 @@ export default function AdminPage() {
       <div className="mx-auto max-w-7xl">
 
         {/* HEADER */}
-        <div className="mb-8 flex flex-col justify-between gap-5 border-b border-white/10 pb-6 md:flex-row md:items-center">
+        <div className="mb-8 flex flex-col justify-between gap-5 border-b border-[#eadbb8] pb-6 md:flex-row md:items-center">
 
           <BrandLogo compact />
 
           <button
             type="button"
             onClick={handleLogout}
-            className="inline-flex w-fit items-center gap-2 rounded-md border border-amber-200/35 px-4 py-2 text-sm font-bold uppercase tracking-[0.14em] text-amber-100 transition hover:border-amber-100 hover:text-white"
+            className="inline-flex w-fit items-center gap-2 rounded-md border border-accent/45 px-4 py-2 text-sm font-bold uppercase tracking-[0.14em] text-[#8c6518] transition hover:border-accent hover:text-primary"
           >
             <FiLogOut aria-hidden="true" />
             Logout
@@ -838,14 +906,14 @@ export default function AdminPage() {
         </div>
 
         {/* ADD PRODUCT */}
-        <div className="rounded-lg border border-amber-200/20 bg-white/[0.045] p-6 shadow-[0_30px_80px_rgba(0,0,0,0.32)]">
+        <div className="rounded-lg border border-accent/25 bg-white/90 p-6 shadow-[0_30px_80px_rgba(99,69,22,0.14)]">
 
-          <p className="flex items-center gap-2 text-sm font-black uppercase tracking-[0.22em] text-amber-200">
+          <p className="flex items-center gap-2 text-sm font-black uppercase tracking-[0.22em] text-accent">
             <FiPackage aria-hidden="true" />
             Inventory
           </p>
 
-          <h2 className="mt-2 text-3xl font-bold text-white">
+          <h2 className="mt-2 text-3xl font-bold text-primary">
             Add creator tool
           </h2>
 
@@ -854,15 +922,29 @@ export default function AdminPage() {
             placeholder="Tool name"
             value={form.name}
             onChange={handleChange}
-            className="mb-4 w-full rounded-md border border-amber-200/30 bg-black/45 p-3 text-white outline-none transition placeholder:text-champagne/35 focus:border-amber-200"
+            className="mb-4 w-full rounded-md border border-accent/35 bg-white/90 p-3 text-primary outline-none transition placeholder:text-champagne/45 focus:border-accent"
           />
 
           <input
             name="price"
+            type="number"
+            min="0"
+            step="1"
             placeholder="Price"
             value={form.price}
             onChange={handleChange}
-            className="mb-4 w-full rounded-md border border-amber-200/30 bg-black/45 p-3 text-white outline-none transition placeholder:text-champagne/35 focus:border-amber-200"
+            className="mb-4 w-full rounded-md border border-accent/35 bg-white/90 p-3 text-primary outline-none transition placeholder:text-champagne/45 focus:border-accent"
+          />
+
+          <input
+            name="stockQuantity"
+            type="number"
+            min="0"
+            step="1"
+            placeholder="Items in stock"
+            value={form.stockQuantity}
+            onChange={handleChange}
+            className="mb-4 w-full rounded-md border border-accent/35 bg-white/90 p-3 text-primary outline-none transition placeholder:text-champagne/45 focus:border-accent"
           />
 
           <input
@@ -870,7 +952,7 @@ export default function AdminPage() {
             placeholder="Short product description"
             value={form.description}
             onChange={handleChange}
-            className="mb-4 w-full rounded-md border border-amber-200/30 bg-black/45 p-3 text-white outline-none transition placeholder:text-champagne/35 focus:border-amber-200"
+            className="mb-4 w-full rounded-md border border-accent/35 bg-white/90 p-3 text-primary outline-none transition placeholder:text-champagne/45 focus:border-accent"
           />
 
           <input
@@ -879,10 +961,10 @@ export default function AdminPage() {
             onChange={(e) =>
               setImage(e.target.files?.[0] || null)
             }
-            className="mb-4 w-full text-sm file:mr-4 file:rounded-md file:border-0 file:bg-amber-200 file:px-4 file:py-2 file:font-bold file:text-black"
+            className="mb-4 w-full text-sm file:mr-4 file:rounded-md file:border-0 file:bg-accent file:px-4 file:py-2 file:font-bold file:text-primary"
           />
 
-          <p className="mb-2 text-sm font-semibold text-amber-100">
+          <p className="mb-2 text-sm font-semibold text-[#8c6518]">
             Multi-row 360 photos
           </p>
 
@@ -890,7 +972,7 @@ export default function AdminPage() {
             {ROTATION_ROW_LABELS.map((label, rowIndex) => (
               <label
                 key={label}
-                className="rounded-md border border-white/10 bg-black/25 p-3 text-sm"
+                className="rounded-md border border-[#eadbb8] bg-[#fff8ea] p-3 text-sm"
               >
                 <span className="mb-2 block font-semibold text-champagne/80">
                   {label}
@@ -905,7 +987,7 @@ export default function AdminPage() {
                       Array.from(e.target.files || [])
                     )
                   }
-                  className="w-full text-xs file:mr-3 file:rounded-md file:border-0 file:bg-amber-200 file:px-3 file:py-2 file:font-bold file:text-black"
+                  className="w-full text-xs file:mr-3 file:rounded-md file:border-0 file:bg-accent file:px-3 file:py-2 file:font-bold file:text-primary"
                 />
                 {rotationImageRows[rowIndex].length > 0 && (
                   <span className="mt-2 block text-xs text-champagne/60">
@@ -926,7 +1008,7 @@ export default function AdminPage() {
           <button
             onClick={handleSubmit}
             disabled={saving}
-            className="w-full rounded-md bg-amber-200 py-3 font-black uppercase tracking-[0.14em] text-black transition hover:bg-white disabled:opacity-60"
+            className="w-full rounded-md bg-accent py-3 font-black uppercase tracking-[0.14em] text-primary transition hover:bg-[#ddb357] disabled:opacity-60"
           >
             {saving ? "Adding..." : "Add Tool"}
           </button>
@@ -936,8 +1018,8 @@ export default function AdminPage() {
         {/* PRODUCTS */}
         <div className="mt-12">
 
-          <h2 className="mb-6 flex items-center gap-3 text-2xl font-bold text-white">
-            <FiShoppingBag className="text-amber-200" aria-hidden="true" />
+          <h2 className="mb-6 flex items-center gap-3 text-2xl font-bold text-primary">
+            <FiShoppingBag className="text-accent" aria-hidden="true" />
             Products
           </h2>
 
@@ -959,11 +1041,14 @@ export default function AdminPage() {
                 createEmptyRotationImageRows();
               const selectedRotationFileCount =
                 countRotationRowFiles(selectedRotationRows);
+              const stockQuantity = getProductStock(p);
+              const productStockValue =
+                productStockForms[String(p.id)] ?? String(stockQuantity);
 
               return (
                 <div
                   key={p.id}
-                  className="rounded-lg border border-white/10 bg-white/[0.045] p-4 shadow-[0_20px_50px_rgba(0,0,0,0.24)]"
+                  className="rounded-lg border border-[#eadbb8] bg-white/90 p-4 shadow-[0_18px_45px_rgba(99,69,22,0.10)]"
                 >
 
                   <Product360Viewer
@@ -974,7 +1059,7 @@ export default function AdminPage() {
                     className="mb-4 h-56"
                   />
 
-                  <h3 className="text-lg font-bold text-white">
+                  <h3 className="text-lg font-bold text-primary">
                     {p.name}
                   </h3>
 
@@ -982,9 +1067,51 @@ export default function AdminPage() {
                     {p.description || "Premium creator tool for studio work."}
                   </p>
 
-                  <p className="mt-3 text-2xl font-black text-amber-200">
+                  <p className="mt-3 text-2xl font-black text-accent">
                     ₦{p.price}
                   </p>
+
+                  <p
+                    className={[
+                      "mt-3 inline-flex rounded-md px-3 py-1 text-xs font-black uppercase tracking-[0.14em]",
+                      stockQuantity > 0
+                        ? "bg-emerald-100 text-emerald-800"
+                        : "bg-red-50 text-red-700",
+                    ].join(" ")}
+                  >
+                    {stockQuantity > 0
+                      ? `${stockQuantity} in stock`
+                      : "Out of stock"}
+                  </p>
+
+                  <div className="mt-4 flex flex-col gap-3 rounded-md border border-[#eadbb8] bg-[#fff8ea] p-3 sm:flex-row sm:items-end">
+                    <label className="flex-1 text-sm font-semibold text-champagne/80">
+                      <span className="mb-2 block">Items in stock</span>
+                      <input
+                        type="number"
+                        min="0"
+                        step="1"
+                        value={productStockValue}
+                        onChange={(e) =>
+                          setProductStockForms((currentForms) => ({
+                            ...currentForms,
+                            [String(p.id)]: e.target.value,
+                          }))
+                        }
+                        className="w-full rounded-md border border-accent/35 bg-white/90 p-3 text-primary outline-none transition focus:border-accent"
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      disabled={Boolean(updatingStockProductId)}
+                      onClick={() => updateProductStock(p)}
+                      className="rounded-md border border-accent/55 px-4 py-3 text-sm font-bold text-[#8c6518] transition hover:border-accent hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {updatingStockProductId === p.id
+                        ? "Updating..."
+                        : "Update Stock"}
+                    </button>
+                  </div>
 
                   <button
                     onClick={() => deleteProduct(p)}
@@ -993,8 +1120,8 @@ export default function AdminPage() {
                     Delete
                   </button>
 
-                  <div className="mt-4 border-t border-white/10 pt-4">
-                    <p className="mb-2 text-sm font-semibold text-amber-100">
+                  <div className="mt-4 border-t border-[#eadbb8] pt-4">
+                    <p className="mb-2 text-sm font-semibold text-[#8c6518]">
                       {updatingProductId === p.id
                         ? "Updating 360 photos..."
                         : `${rotationImageRows.flat().length} photos in ${countRotationRows(
@@ -1006,7 +1133,7 @@ export default function AdminPage() {
                       {ROTATION_ROW_LABELS.map((label, rowIndex) => (
                         <label
                           key={`${p.id}-${label}`}
-                          className="rounded-md border border-white/10 bg-black/25 p-3 text-sm"
+                          className="rounded-md border border-[#eadbb8] bg-[#fff8ea] p-3 text-sm"
                         >
                           <span className="mb-2 block font-semibold text-champagne/80">
                             {label}
@@ -1023,7 +1150,7 @@ export default function AdminPage() {
                                 Array.from(e.target.files || [])
                               )
                             }
-                            className="w-full text-xs disabled:opacity-60 file:mr-3 file:rounded-md file:border-0 file:bg-amber-200 file:px-3 file:py-2 file:font-bold file:text-black"
+                            className="w-full text-xs disabled:opacity-60 file:mr-3 file:rounded-md file:border-0 file:bg-accent file:px-3 file:py-2 file:font-bold file:text-primary"
                           />
                           {selectedRotationRows[rowIndex].length > 0 && (
                             <span className="mt-2 block text-xs text-champagne/60">
@@ -1043,7 +1170,7 @@ export default function AdminPage() {
                       onClick={() =>
                         updateProductRotationImages(p, selectedRotationRows)
                       }
-                      className="mt-3 rounded-md border border-amber-200/45 px-4 py-2 text-sm font-bold text-amber-100 transition hover:border-amber-100 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+                      className="mt-3 rounded-md border border-accent/55 px-4 py-2 text-sm font-bold text-[#8c6518] transition hover:border-accent hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       Replace 360 photos
                     </button>
@@ -1060,8 +1187,8 @@ export default function AdminPage() {
         {/* ORDERS */}
         <div className="mt-12">
 
-          <h2 className="mb-6 flex items-center gap-3 text-2xl font-bold text-white">
-            <FiTruck className="text-amber-200" aria-hidden="true" />
+          <h2 className="mb-6 flex items-center gap-3 text-2xl font-bold text-primary">
+            <FiTruck className="text-accent" aria-hidden="true" />
             Orders
           </h2>
 
@@ -1072,32 +1199,32 @@ export default function AdminPage() {
           )}
 
           <div className="mb-6 grid gap-3 md:grid-cols-3">
-            <div className="rounded-lg border border-white/10 bg-white/[0.045] p-4">
+            <div className="rounded-lg border border-[#eadbb8] bg-white/90 p-4">
               <p className="flex items-center gap-2 text-sm font-bold text-champagne/70">
-                <FiCreditCard className="text-amber-200" aria-hidden="true" />
+                <FiCreditCard className="text-accent" aria-hidden="true" />
                 Paid orders
               </p>
-              <p className="mt-2 text-3xl font-black text-white">
+              <p className="mt-2 text-3xl font-black text-primary">
                 {orders.length}
               </p>
             </div>
 
-            <div className="rounded-lg border border-white/10 bg-white/[0.045] p-4">
+            <div className="rounded-lg border border-[#eadbb8] bg-white/90 p-4">
               <p className="flex items-center gap-2 text-sm font-bold text-champagne/70">
-                <FiClock className="text-amber-200" aria-hidden="true" />
+                <FiClock className="text-accent" aria-hidden="true" />
                 Processing
               </p>
-              <p className="mt-2 text-3xl font-black text-white">
+              <p className="mt-2 text-3xl font-black text-primary">
                 {processingOrderCount}
               </p>
             </div>
 
-            <div className="rounded-lg border border-white/10 bg-white/[0.045] p-4">
+            <div className="rounded-lg border border-[#eadbb8] bg-white/90 p-4">
               <p className="flex items-center gap-2 text-sm font-bold text-champagne/70">
-                <FiCheckCircle className="text-amber-200" aria-hidden="true" />
+                <FiCheckCircle className="text-accent" aria-hidden="true" />
                 Delivered
               </p>
-              <p className="mt-2 text-3xl font-black text-white">
+              <p className="mt-2 text-3xl font-black text-primary">
                 {deliveredOrderCount}
               </p>
               <p className="mt-1 text-sm text-champagne/55">
@@ -1109,8 +1236,8 @@ export default function AdminPage() {
           <div className="space-y-6">
 
             {orders.length === 0 && !ordersError ? (
-              <div className="rounded-lg border border-amber-200/20 bg-white/[0.04] p-8 text-center">
-                <h3 className="text-2xl font-bold text-white">
+              <div className="rounded-lg border border-accent/25 bg-white/85 p-8 text-center">
+                <h3 className="text-2xl font-bold text-primary">
                   No paid orders yet
                 </h3>
                 <p className="mx-auto mt-2 max-w-lg text-champagne/65">
@@ -1125,15 +1252,15 @@ export default function AdminPage() {
                 return (
                   <div
                     key={order.id}
-                    className="rounded-lg border border-white/10 bg-white/[0.045] p-6 shadow-[0_20px_50px_rgba(0,0,0,0.24)]"
+                    className="rounded-lg border border-[#eadbb8] bg-white/90 p-6 shadow-[0_18px_45px_rgba(99,69,22,0.10)]"
                   >
 
                     <div className="flex flex-col justify-between gap-4 md:flex-row md:items-start">
                       <div>
-                        <p className="text-xs font-black uppercase tracking-[0.22em] text-amber-200">
+                        <p className="text-xs font-black uppercase tracking-[0.22em] text-accent">
                           Order report
                         </p>
-                        <h3 className="mt-2 text-2xl font-bold text-white">
+                        <h3 className="mt-2 text-2xl font-bold text-primary">
                           {order.product_name}
                         </h3>
                         <p className="mt-1 text-sm text-champagne/55">
@@ -1146,7 +1273,7 @@ export default function AdminPage() {
                           "inline-flex w-fit items-center gap-2 rounded-md px-3 py-2 text-sm font-black uppercase tracking-[0.12em]",
                           isDelivered
                             ? "bg-emerald-300 text-emerald-950"
-                            : "bg-amber-200 text-black",
+                            : "bg-accent text-primary",
                         ].join(" ")}
                       >
                         {isDelivered ? (
@@ -1163,7 +1290,7 @@ export default function AdminPage() {
                         <dt className="text-xs font-black uppercase tracking-[0.18em] text-champagne/45">
                           Customer
                         </dt>
-                        <dd className="mt-1 text-white">
+                        <dd className="mt-1 text-primary">
                           {order.customer_name}
                         </dd>
                       </div>
@@ -1172,7 +1299,7 @@ export default function AdminPage() {
                         <dt className="text-xs font-black uppercase tracking-[0.18em] text-champagne/45">
                           Amount
                         </dt>
-                        <dd className="mt-1 font-black text-amber-200">
+                        <dd className="mt-1 font-black text-accent">
                           NGN {Number(order.amount || 0).toLocaleString()}
                         </dd>
                       </div>
@@ -1232,7 +1359,7 @@ export default function AdminPage() {
                       </div>
                     </dl>
 
-                    <div className="mt-6 flex flex-wrap gap-2 border-t border-white/10 pt-5">
+                    <div className="mt-6 flex flex-wrap gap-2 border-t border-[#eadbb8] pt-5">
                       <button
                         onClick={() =>
                           assignVendor(
@@ -1240,7 +1367,7 @@ export default function AdminPage() {
                             "Studio Desk A"
                           )
                         }
-                        className="rounded-md bg-signal px-4 py-2 font-bold text-black"
+                        className="rounded-md bg-signal px-4 py-2 font-bold text-white"
                       >
                         Assign Desk A
                       </button>
@@ -1252,7 +1379,7 @@ export default function AdminPage() {
                             "Studio Desk B"
                           )
                         }
-                        className="rounded-md bg-amber-200 px-4 py-2 font-bold text-black"
+                        className="rounded-md bg-accent px-4 py-2 font-bold text-primary"
                       >
                         Assign Desk B
                       </button>
@@ -1268,7 +1395,7 @@ export default function AdminPage() {
                           updatingOrderId === order.id ||
                           (order.order_status || "processing") === "processing"
                         }
-                        className="rounded-md border border-amber-200/45 px-4 py-2 font-bold text-amber-100 disabled:opacity-60"
+                        className="rounded-md border border-accent/55 px-4 py-2 font-bold text-[#8c6518] disabled:opacity-60"
                       >
                         Processing
                       </button>
@@ -1284,7 +1411,7 @@ export default function AdminPage() {
                           updatingOrderId === order.id ||
                           order.order_status === "delivered"
                         }
-                        className="inline-flex items-center gap-2 rounded-md bg-amber-200 px-4 py-2 font-bold text-black disabled:opacity-60"
+                        className="inline-flex items-center gap-2 rounded-md bg-accent px-4 py-2 font-bold text-primary disabled:opacity-60"
                       >
                         <FiCheckCircle aria-hidden="true" />
                         {order.order_status === "delivered"
