@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { FiGrid, FiSearch } from "react-icons/fi";
 import { supabase } from "@/lib/supabaseClient";
 import {
-  getProductImageUrl,
+  getProductDisplayImageUrl,
   getProductImageRows,
   getProductImageUrls,
   getProductStock,
@@ -115,7 +115,7 @@ export default function ProductsPage() {
         ) : (
           <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
             {filteredProducts.map((p) => {
-              const imageUrl = getProductImageUrl(p.image_url);
+              const imageUrl = getProductDisplayImageUrl(p);
               const rotationImageUrls = getProductImageUrls(
                 p.rotation_image_urls
               );

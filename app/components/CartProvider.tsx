@@ -9,6 +9,12 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { supabase } from "@/lib/supabaseClient";
+import {
+  getProductDisplayImageUrl,
+  getProductStock,
+  type Product,
+} from "@/lib/productImages";
 
 type CartProductInput = {
   id: number | string;
@@ -104,10 +110,96 @@ function getStoredCartItems() {
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>(getStoredCartItems);
+  const cartProductIds = useMemo(
+    () => items.map((item) => item.id).sort().join(","),
+    [items]
+  );
 
   useEffect(() => {
     window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
   }, [items]);
+
+  useEffect(() => {
+    if (!cartProductIds) return;
+
+    let isMounted = true;
+
+    const refreshCartProducts = async () => {
+      const productIds = cartProductIds.split(",").filter(Boolean);
+      const { data, error } = await supabase
+        .from("products")
+        .select("*")
+        .in("id", productIds);
+
+      if (!isMounted || error || !data?.length) return;
+
+      const productsById = new Map(
+        (data as Product[]).map((product) => [String(product.id), product])
+      );
+
+      setItems((currentItems) => {
+        let changed = false;
+        const nextItems: CartItem[] = [];
+
+        currentItems.forEach((item) => {
+          const product = productsById.get(item.id);
+
+          if (!product) {
+            nextItems.push(item);
+            return;
+          }
+
+          const productPrice = Number(product.price);
+          const hasStockQuantity = Object.prototype.hasOwnProperty.call(
+            product,
+            "stock_quantity"
+          );
+          const stockQuantity = hasStockQuantity
+            ? getProductStock(product)
+            : item.stockQuantity;
+
+          if (stockQuantity <= 0) {
+            changed = true;
+            return;
+          }
+
+          const nextItem: CartItem = {
+            ...item,
+            description: product.description || item.description,
+            imageUrl: getProductDisplayImageUrl(product) || item.imageUrl,
+            name: product.name || item.name,
+            price:
+              Number.isFinite(productPrice) && productPrice > 0
+                ? productPrice
+                : item.price,
+            quantity: Math.min(item.quantity, stockQuantity),
+            stockQuantity,
+          };
+
+          if (
+            nextItem.description !== item.description ||
+            nextItem.imageUrl !== item.imageUrl ||
+            nextItem.name !== item.name ||
+            nextItem.price !== item.price ||
+            nextItem.quantity !== item.quantity ||
+            nextItem.stockQuantity !== item.stockQuantity
+          ) {
+            changed = true;
+          }
+
+          nextItems.push(nextItem);
+        });
+
+        return changed ? nextItems : currentItems;
+      });
+    };
+
+    void refreshCartProducts();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [cartProductIds]);
 
   const addItem = useCallback((product: CartProductInput) => {
     setItems((currentItems) => {

@@ -13,7 +13,7 @@ import {
 } from "react-icons/fi";
 import { supabase } from "@/lib/supabaseClient";
 import {
-  getProductImageUrl,
+  getProductDisplayImageUrl,
   getProductImageRows,
   getProductImageUrls,
   getProductStock,
@@ -236,7 +236,7 @@ export default function Home() {
           <>
           <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
             {featuredProducts.map((p) => {
-              const imageUrl = getProductImageUrl(p.image_url);
+              const imageUrl = getProductDisplayImageUrl(p);
               const rotationImageUrls = getProductImageUrls(
                 p.rotation_image_urls
               );

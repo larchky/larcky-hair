@@ -29,6 +29,21 @@ export function getProductImageUrl(path?: string | null) {
   return data.publicUrl;
 }
 
+export function getProductDisplayImageUrl(
+  product: Pick<
+    Product,
+    "image_url" | "rotation_image_rows" | "rotation_image_urls"
+  >
+) {
+  const displayImagePath =
+    product.image_url ||
+    (product.rotation_image_rows || []).flat().find(Boolean) ||
+    (product.rotation_image_urls || []).find(Boolean) ||
+    null;
+
+  return getProductImageUrl(displayImagePath);
+}
+
 export function getProductImageUrls(paths?: string[] | null) {
   return (paths || []).flatMap((path) => {
     const url = getProductImageUrl(path);

@@ -10,3 +10,5 @@ drop constraint if exists products_stock_quantity_nonnegative;
 alter table public.products
 add constraint products_stock_quantity_nonnegative
 check (stock_quantity >= 0);
+
+notify pgrst, 'reload schema';

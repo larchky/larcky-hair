@@ -16,7 +16,7 @@ import {
 } from "react-icons/fi";
 import { supabase } from "@/lib/supabaseClient";
 import {
-  getProductImageUrl,
+  getProductDisplayImageUrl,
   getProductImageRows,
   getProductImageUrls,
   getProductStock,
@@ -207,6 +207,20 @@ function formatOrderDate(value: string) {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(date);
+}
+
+function getProductSaveErrorMessage(error: unknown, fallback: string) {
+  const message =
+    error instanceof Error ? error.message : "";
+
+  if (
+    message.includes("stock_quantity") &&
+    message.includes("schema cache")
+  ) {
+    return "Product stock is not set up in Supabase yet. Run supabase/product-stock.sql in the Supabase SQL editor, then try again.";
+  }
+
+  return message || fallback;
 }
 
 export default function AdminPage() {
@@ -605,9 +619,7 @@ export default function AdminPage() {
 
       await fetchProducts();
     } catch (error) {
-      alert(
-        error instanceof Error ? error.message : "Could not update stock."
-      );
+      alert(getProductSaveErrorMessage(error, "Could not update stock."));
     } finally {
       setUpdatingStockProductId(null);
     }
@@ -689,9 +701,7 @@ export default function AdminPage() {
       }
 
       alert(
-        error instanceof Error
-          ? error.message
-          : "Could not add product."
+        getProductSaveErrorMessage(error, "Could not add product.")
       );
     } finally {
       setSaving(false);
@@ -1078,9 +1088,7 @@ export default function AdminPage() {
           <div className="grid gap-5 md:grid-cols-2">
 
             {products.map((p) => {
-              const imageUrl = getProductImageUrl(
-                p.image_url
-              );
+              const imageUrl = getProductDisplayImageUrl(p);
               const rotationImageUrls = getProductImageUrls(
                 p.rotation_image_urls
               );
