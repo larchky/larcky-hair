@@ -3,12 +3,15 @@
 import { useCallback, useEffect, useState, type ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
 import {
+  FiChevronDown,
+  FiChevronUp,
   FiCheckCircle,
   FiClock,
   FiCreditCard,
   FiLogOut,
   FiPackage,
   FiShoppingBag,
+  FiTrash2,
   FiTruck,
 } from "react-icons/fi";
 import { supabase } from "@/lib/supabaseClient";
@@ -249,6 +252,10 @@ export default function AdminPage() {
   >({});
 
   const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
+
+  const [deletingOrderId, setDeletingOrderId] = useState<string | null>(null);
+
+  const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
 
   // -----------------------------------
   // FETCH PRODUCTS
@@ -861,6 +868,51 @@ export default function AdminPage() {
     }
   };
 
+  // -----------------------------------
+  // DELETE ORDER
+  // -----------------------------------
+  const deleteOrder = async (order: Order) => {
+    const confirmDelete = confirm(
+      `Delete order for ${order.customer_name || order.product_name}?`
+    );
+
+    if (!confirmDelete || deletingOrderId) return;
+
+    setDeletingOrderId(order.id);
+
+    try {
+      const token = await getAdminAccessToken();
+      const response = await fetch("/api/admin/orders", {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          id: order.id,
+        }),
+      });
+      const result = (await response.json().catch(() => null)) as {
+        error?: string;
+      } | null;
+
+      if (!response.ok) {
+        alert(result?.error || "Could not delete order.");
+        return;
+      }
+
+      setExpandedOrderId((currentOrderId) =>
+        currentOrderId === order.id ? null : currentOrderId
+      );
+
+      await fetchOrders();
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Could not delete order.");
+    } finally {
+      setDeletingOrderId(null);
+    }
+  };
+
   const deliveredOrderCount = orders.filter(
     (order) => order.order_status === "delivered"
   ).length;
@@ -1233,7 +1285,7 @@ export default function AdminPage() {
             </div>
           </div>
 
-          <div className="space-y-6">
+          <div className="space-y-4">
 
             {orders.length === 0 && !ordersError ? (
               <div className="rounded-lg border border-accent/25 bg-white/85 p-8 text-center">
@@ -1246,183 +1298,246 @@ export default function AdminPage() {
                 </p>
               </div>
             ) : (
-              orders.map((order) => {
-                const isDelivered = order.order_status === "delivered";
+              <div className="overflow-hidden rounded-lg border border-[#eadbb8] bg-white/90 shadow-[0_18px_45px_rgba(99,69,22,0.10)]">
+                <div className="border-b border-[#eadbb8] px-4 py-4">
+                  <h3 className="text-xl font-bold text-primary">
+                    Order list
+                  </h3>
+                  <p className="mt-1 text-sm text-champagne/65">
+                    Brief order details are shown here. Open an order to view
+                    the full report.
+                  </p>
+                </div>
 
-                return (
-                  <div
-                    key={order.id}
-                    className="rounded-lg border border-[#eadbb8] bg-white/90 p-6 shadow-[0_18px_45px_rgba(99,69,22,0.10)]"
-                  >
+                <div className="divide-y divide-[#eadbb8]">
+                  {orders.map((order) => {
+                    const isDelivered = order.order_status === "delivered";
+                    const isExpanded = expandedOrderId === order.id;
+                    const isDeleting = deletingOrderId === order.id;
+                    const isUpdating = updatingOrderId === order.id;
 
-                    <div className="flex flex-col justify-between gap-4 md:flex-row md:items-start">
-                      <div>
-                        <p className="text-xs font-black uppercase tracking-[0.22em] text-accent">
-                          Order report
-                        </p>
-                        <h3 className="mt-2 text-2xl font-bold text-primary">
-                          {order.product_name}
-                        </h3>
-                        <p className="mt-1 text-sm text-champagne/55">
-                          {formatOrderDate(order.created_at)}
-                        </p>
-                      </div>
+                    return (
+                      <article key={order.id} className="p-4">
+                        <div className="grid gap-4 xl:grid-cols-[1fr_auto] xl:items-center">
+                          <div className="grid gap-4 md:grid-cols-[minmax(0,1.2fr)_minmax(0,0.85fr)_auto] md:items-center">
+                            <div>
+                              <p className="text-xs font-black uppercase tracking-[0.18em] text-accent">
+                                {formatOrderDate(order.created_at)}
+                              </p>
+                              <h4 className="mt-2 text-lg font-bold text-primary">
+                                {order.product_name}
+                              </h4>
+                              <p className="mt-1 text-sm text-champagne/70">
+                                {order.customer_name}
+                              </p>
+                            </div>
 
-                      <span
-                        className={[
-                          "inline-flex w-fit items-center gap-2 rounded-md px-3 py-2 text-sm font-black uppercase tracking-[0.12em]",
-                          isDelivered
-                            ? "bg-emerald-300 text-emerald-950"
-                            : "bg-accent text-primary",
-                        ].join(" ")}
-                      >
-                        {isDelivered ? (
-                          <FiCheckCircle aria-hidden="true" />
-                        ) : (
-                          <FiClock aria-hidden="true" />
+                            <div>
+                              <p className="font-black text-accent">
+                                NGN {Number(order.amount || 0).toLocaleString()}
+                              </p>
+                              <p className="mt-1 text-sm text-champagne/65">
+                                {order.customer_phone || "No phone provided"}
+                              </p>
+                            </div>
+
+                            <span
+                              className={[
+                                "inline-flex w-fit items-center gap-2 rounded-md px-3 py-2 text-sm font-black uppercase tracking-[0.12em]",
+                                isDelivered
+                                  ? "bg-emerald-300 text-emerald-950"
+                                  : "bg-accent text-primary",
+                              ].join(" ")}
+                            >
+                              {isDelivered ? (
+                                <FiCheckCircle aria-hidden="true" />
+                              ) : (
+                                <FiClock aria-hidden="true" />
+                              )}
+                              {isDelivered ? "Delivered" : "Processing"}
+                            </span>
+                          </div>
+
+                          <button
+                            type="button"
+                            aria-expanded={isExpanded}
+                            onClick={() =>
+                              setExpandedOrderId((currentOrderId) =>
+                                currentOrderId === order.id ? null : order.id
+                              )
+                            }
+                            className="inline-flex w-fit items-center justify-center gap-2 rounded-md border border-accent/55 px-4 py-2 text-sm font-bold uppercase tracking-[0.12em] text-[#8c6518] transition hover:border-accent hover:text-primary"
+                          >
+                            {isExpanded ? (
+                              <FiChevronUp aria-hidden="true" />
+                            ) : (
+                              <FiChevronDown aria-hidden="true" />
+                            )}
+                            {isExpanded ? "Hide Details" : "View Details"}
+                          </button>
+                        </div>
+
+                        {isExpanded && (
+                          <div className="mt-5 rounded-md border border-[#eadbb8] bg-[#fff8ea] p-4">
+                            <div className="flex flex-col justify-between gap-3 border-b border-[#eadbb8] pb-4 sm:flex-row sm:items-start">
+                              <div>
+                                <p className="text-xs font-black uppercase tracking-[0.22em] text-accent">
+                                  Order report
+                                </p>
+                                <h4 className="mt-2 text-2xl font-bold text-primary">
+                                  {order.product_name}
+                                </h4>
+                              </div>
+
+                              <button
+                                type="button"
+                                onClick={() => deleteOrder(order)}
+                                disabled={isDeleting}
+                                className="inline-flex w-fit items-center gap-2 rounded-md border border-red-200 bg-red-50 px-4 py-2 text-sm font-bold text-red-700 transition hover:border-red-300 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+                              >
+                                <FiTrash2 aria-hidden="true" />
+                                {isDeleting ? "Deleting..." : "Delete Order"}
+                              </button>
+                            </div>
+
+                            <dl className="mt-5 grid gap-x-6 gap-y-4 md:grid-cols-2">
+                              <div>
+                                <dt className="text-xs font-black uppercase tracking-[0.18em] text-champagne/45">
+                                  Customer
+                                </dt>
+                                <dd className="mt-1 text-primary">
+                                  {order.customer_name}
+                                </dd>
+                              </div>
+
+                              <div>
+                                <dt className="text-xs font-black uppercase tracking-[0.18em] text-champagne/45">
+                                  Amount
+                                </dt>
+                                <dd className="mt-1 font-black text-accent">
+                                  NGN {Number(order.amount || 0).toLocaleString()}
+                                </dd>
+                              </div>
+
+                              <div>
+                                <dt className="text-xs font-black uppercase tracking-[0.18em] text-champagne/45">
+                                  Email
+                                </dt>
+                                <dd className="mt-1 break-words text-champagne/78">
+                                  {order.customer_email}
+                                </dd>
+                              </div>
+
+                              <div>
+                                <dt className="text-xs font-black uppercase tracking-[0.18em] text-champagne/45">
+                                  Phone
+                                </dt>
+                                <dd className="mt-1 text-champagne/78">
+                                  {order.customer_phone || "Not provided"}
+                                </dd>
+                              </div>
+
+                              <div className="md:col-span-2">
+                                <dt className="text-xs font-black uppercase tracking-[0.18em] text-champagne/45">
+                                  Delivery address
+                                </dt>
+                                <dd className="mt-1 text-champagne/78">
+                                  {order.delivery_address || "Not provided"}
+                                </dd>
+                              </div>
+
+                              <div>
+                                <dt className="text-xs font-black uppercase tracking-[0.18em] text-champagne/45">
+                                  Transaction
+                                </dt>
+                                <dd className="mt-1 break-all text-champagne/78">
+                                  {order.transaction_id}
+                                </dd>
+                              </div>
+
+                              <div>
+                                <dt className="text-xs font-black uppercase tracking-[0.18em] text-champagne/45">
+                                  Payment
+                                </dt>
+                                <dd className="mt-1 text-champagne/78">
+                                  {order.payment_status}
+                                </dd>
+                              </div>
+
+                              <div>
+                                <dt className="text-xs font-black uppercase tracking-[0.18em] text-champagne/45">
+                                  Fulfillment
+                                </dt>
+                                <dd className="mt-1 text-champagne/78">
+                                  {order.assigned_vendor || "Not assigned"}
+                                </dd>
+                              </div>
+                            </dl>
+
+                            <div className="mt-6 flex flex-wrap gap-2 border-t border-[#eadbb8] pt-5">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  assignVendor(order.id, "Studio Desk A")
+                                }
+                                disabled={isDeleting}
+                                className="rounded-md bg-signal px-4 py-2 font-bold text-white disabled:opacity-60"
+                              >
+                                Assign Desk A
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  assignVendor(order.id, "Studio Desk B")
+                                }
+                                disabled={isDeleting}
+                                className="rounded-md bg-accent px-4 py-2 font-bold text-primary disabled:opacity-60"
+                              >
+                                Assign Desk B
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  updateOrderStatus(order.id, "processing")
+                                }
+                                disabled={
+                                  isDeleting ||
+                                  isUpdating ||
+                                  (order.order_status || "processing") ===
+                                    "processing"
+                                }
+                                className="rounded-md border border-accent/55 px-4 py-2 font-bold text-[#8c6518] disabled:opacity-60"
+                              >
+                                Processing
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  updateOrderStatus(order.id, "delivered")
+                                }
+                                disabled={
+                                  isDeleting ||
+                                  isUpdating ||
+                                  order.order_status === "delivered"
+                                }
+                                className="inline-flex items-center gap-2 rounded-md bg-accent px-4 py-2 font-bold text-primary disabled:opacity-60"
+                              >
+                                <FiCheckCircle aria-hidden="true" />
+                                {order.order_status === "delivered"
+                                  ? "Delivered"
+                                  : "Mark Delivered"}
+                              </button>
+                            </div>
+                          </div>
                         )}
-                        {isDelivered ? "Delivered" : "Processing"}
-                      </span>
-                    </div>
-
-                    <dl className="mt-6 grid gap-x-6 gap-y-4 md:grid-cols-2">
-                      <div>
-                        <dt className="text-xs font-black uppercase tracking-[0.18em] text-champagne/45">
-                          Customer
-                        </dt>
-                        <dd className="mt-1 text-primary">
-                          {order.customer_name}
-                        </dd>
-                      </div>
-
-                      <div>
-                        <dt className="text-xs font-black uppercase tracking-[0.18em] text-champagne/45">
-                          Amount
-                        </dt>
-                        <dd className="mt-1 font-black text-accent">
-                          NGN {Number(order.amount || 0).toLocaleString()}
-                        </dd>
-                      </div>
-
-                      <div>
-                        <dt className="text-xs font-black uppercase tracking-[0.18em] text-champagne/45">
-                          Email
-                        </dt>
-                        <dd className="mt-1 break-words text-champagne/78">
-                          {order.customer_email}
-                        </dd>
-                      </div>
-
-                      <div>
-                        <dt className="text-xs font-black uppercase tracking-[0.18em] text-champagne/45">
-                          Phone
-                        </dt>
-                        <dd className="mt-1 text-champagne/78">
-                          {order.customer_phone || "Not provided"}
-                        </dd>
-                      </div>
-
-                      <div className="md:col-span-2">
-                        <dt className="text-xs font-black uppercase tracking-[0.18em] text-champagne/45">
-                          Delivery address
-                        </dt>
-                        <dd className="mt-1 text-champagne/78">
-                          {order.delivery_address || "Not provided"}
-                        </dd>
-                      </div>
-
-                      <div>
-                        <dt className="text-xs font-black uppercase tracking-[0.18em] text-champagne/45">
-                          Transaction
-                        </dt>
-                        <dd className="mt-1 break-all text-champagne/78">
-                          {order.transaction_id}
-                        </dd>
-                      </div>
-
-                      <div>
-                        <dt className="text-xs font-black uppercase tracking-[0.18em] text-champagne/45">
-                          Payment
-                        </dt>
-                        <dd className="mt-1 text-champagne/78">
-                          {order.payment_status}
-                        </dd>
-                      </div>
-
-                      <div>
-                        <dt className="text-xs font-black uppercase tracking-[0.18em] text-champagne/45">
-                          Fulfillment
-                        </dt>
-                        <dd className="mt-1 text-champagne/78">
-                          {order.assigned_vendor || "Not assigned"}
-                        </dd>
-                      </div>
-                    </dl>
-
-                    <div className="mt-6 flex flex-wrap gap-2 border-t border-[#eadbb8] pt-5">
-                      <button
-                        onClick={() =>
-                          assignVendor(
-                            order.id,
-                            "Studio Desk A"
-                          )
-                        }
-                        className="rounded-md bg-signal px-4 py-2 font-bold text-white"
-                      >
-                        Assign Desk A
-                      </button>
-
-                      <button
-                        onClick={() =>
-                          assignVendor(
-                            order.id,
-                            "Studio Desk B"
-                          )
-                        }
-                        className="rounded-md bg-accent px-4 py-2 font-bold text-primary"
-                      >
-                        Assign Desk B
-                      </button>
-
-                      <button
-                        onClick={() =>
-                          updateOrderStatus(
-                            order.id,
-                            "processing"
-                          )
-                        }
-                        disabled={
-                          updatingOrderId === order.id ||
-                          (order.order_status || "processing") === "processing"
-                        }
-                        className="rounded-md border border-accent/55 px-4 py-2 font-bold text-[#8c6518] disabled:opacity-60"
-                      >
-                        Processing
-                      </button>
-
-                      <button
-                        onClick={() =>
-                          updateOrderStatus(
-                            order.id,
-                            "delivered"
-                          )
-                        }
-                        disabled={
-                          updatingOrderId === order.id ||
-                          order.order_status === "delivered"
-                        }
-                        className="inline-flex items-center gap-2 rounded-md bg-accent px-4 py-2 font-bold text-primary disabled:opacity-60"
-                      >
-                        <FiCheckCircle aria-hidden="true" />
-                        {order.order_status === "delivered"
-                          ? "Delivered"
-                          : "Mark Delivered"}
-                      </button>
-                    </div>
-
-                  </div>
-                );
-              })
+                      </article>
+                    );
+                  })}
+                </div>
+              </div>
             )}
 
           </div>

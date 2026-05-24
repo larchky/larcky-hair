@@ -8,6 +8,10 @@ type OrderPatchBody = {
   assigned_vendor?: unknown;
 };
 
+type OrderDeleteBody = {
+  id?: unknown;
+};
+
 class AdminOrdersError extends Error {
   statusCode: number;
 
@@ -133,6 +137,33 @@ export async function PATCH(request: Request) {
     }
 
     return Response.json({ order: data });
+  } catch (error) {
+    return errorResponse(error);
+  }
+}
+
+export async function DELETE(request: Request) {
+  try {
+    const supabaseAdmin = await getAuthorizedSupabaseAdmin(request);
+    const body = (await request.json()) as OrderDeleteBody;
+    const id = asString(body.id);
+
+    if (!id) {
+      throw new AdminOrdersError("Missing order id.");
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from("orders")
+      .delete()
+      .eq("id", id)
+      .select("id")
+      .single();
+
+    if (error) {
+      throw new AdminOrdersError(error.message, 500);
+    }
+
+    return Response.json({ deletedOrder: data });
   } catch (error) {
     return errorResponse(error);
   }
